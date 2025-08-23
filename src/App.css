@@ -1,0 +1,281 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  /* Font families */
+  --font-family-sans: 'Inter', system-ui, sans-serif;
+  --font-family-serif: Georgia, serif;
+  --font-family-mono: Menlo, monospace;
+  
+  /* Border radius */
+  --radius: 1.3rem;
+  
+  /* Custom colors - Define all your CSS variables as colors in v4 */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
+  /* Chart colors */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  
+  /* Sidebar colors */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Medical custom colors */
+  --color-medical-blue: var(--medical-blue);
+  --color-healthcare-green: var(--healthcare-green);
+  --color-clinical-white: var(--clinical-white);
+  --color-professional-dark: var(--professional-dark);
+  --color-diagnostic-purple: var(--diagnostic-purple);
+  --color-alert-orange: var(--alert-orange);
+}
+
+:root {
+  --background: hsl(248, 50%, 97.647%);
+  --foreground: hsl(206, 33.333%, 12.549%);
+  --card: hsl(248, 50%, 97.647%);
+  --card-foreground: hsl(206, 33.333%, 12.549%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(206, 33.333%, 12.549%);
+  --primary: hsl(203.886, 88.284%, 53.137%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(206, 33.333%, 12.549%);
+  --secondary-foreground: hsl(0, 0%, 100%);
+  --muted: hsl(240, 1.961%, 90%);
+  --muted-foreground: hsl(206, 33.333%, 12.549%);
+  --accent: hsl(211.579, 51.351%, 92.745%);
+  --accent-foreground: hsl(203.886, 88.284%, 53.137%);
+  --destructive: hsl(356.303, 90.558%, 54.314%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --border: hsl(201.429, 30.435%, 90.98%);
+  --input: hsl(200, 23.077%, 97.451%);
+  --ring: hsl(202.817, 89.121%, 53.137%);
+  --chart-1: hsl(203.886, 88.284%, 53.137%);
+  --chart-2: hsl(159.783, 100%, 36.078%);
+  --chart-3: hsl(42.029, 92.825%, 56.275%);
+  --chart-4: hsl(147.143, 78.505%, 41.961%);
+  --chart-5: hsl(341.489, 75.2%, 50.98%);
+  --sidebar: hsl(248, 50%, 97.647%);
+  --sidebar-foreground: hsl(206, 33.333%, 12.549%);
+  --sidebar-primary: hsl(203.886, 88.284%, 53.137%);
+  --sidebar-primary-foreground: hsl(0, 0%, 100%);
+  --sidebar-accent: hsl(211.579, 51.351%, 92.745%);
+  --sidebar-accent-foreground: hsl(203.886, 88.284%, 53.137%);
+  --sidebar-border: hsl(205, 25%, 90.588%);
+  --sidebar-ring: hsl(202.817, 89.121%, 53.137%);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+  
+  /* Medical color scheme */
+  --medical-blue: hsl(204, 74.359%, 44.706%);
+  --healthcare-green: hsl(159.783, 92.683%, 40.196%);
+  --clinical-white: hsl(210, 50%, 98.039%);
+  --professional-dark: hsl(215.517, 32.432%, 16.863%);
+  --diagnostic-purple: hsl(252.174, 82.927%, 55.098%);
+  --alert-orange: hsl(20.305, 89.593%, 48.627%);
+}
+
+.dark {
+  --background: hsl(0, 0%, 0%);
+  --foreground: hsl(200, 6.667%, 91.176%);
+  --card: hsl(228, 9.804%, 10%);
+  --card-foreground: hsl(0, 0%, 85.098%);
+  --popover: hsl(0, 0%, 0%);
+  --popover-foreground: hsl(200, 6.667%, 91.176%);
+  --primary: hsl(203.774, 87.603%, 52.549%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(195, 15.385%, 94.902%);
+  --secondary-foreground: hsl(210, 25%, 7.843%);
+  --muted: hsl(0, 0%, 9.412%);
+  --muted-foreground: hsl(210, 3.39%, 46.275%);
+  --accent: hsl(205.714, 70%, 7.843%);
+  --accent-foreground: hsl(203.774, 87.603%, 52.549%);
+  --destructive: hsl(356.303, 90.558%, 54.314%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --border: hsl(210, 5.263%, 14.902%);
+  --input: hsl(207.692, 27.66%, 18.431%);
+  --ring: hsl(202.817, 89.121%, 53.137%);
+  --chart-1: hsl(203.886, 88.284%, 53.137%);
+  --chart-2: hsl(159.783, 100%, 36.078%);
+  --chart-3: hsl(42.029, 92.825%, 56.275%);
+  --chart-4: hsl(147.143, 78.505%, 41.961%);
+  --chart-5: hsl(341.489, 75.2%, 50.98%);
+  --sidebar: hsl(228, 9.804%, 10%);
+  --sidebar-foreground: hsl(0, 0%, 85.098%);
+  --sidebar-primary: hsl(202.817, 89.121%, 53.137%);
+  --sidebar-primary-foreground: hsl(0, 0%, 100%);
+  --sidebar-accent: hsl(205.714, 70%, 7.843%);
+  --sidebar-accent-foreground: hsl(203.774, 87.603%, 52.549%);
+  --sidebar-border: hsl(205.714, 15.789%, 26.078%);
+  --sidebar-ring: hsl(202.817, 89.121%, 53.137%);
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@layer base {
+  /* ✅ Fixed: Use border color instead of border-border */
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    @apply font-sans antialiased bg-clinical-white text-professional-dark;
+  }
+}
+
+@layer components {
+  .medical-card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
+  }
+
+  .medical-button-primary {
+    @apply bg-medical-blue hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+
+  .medical-button-secondary {
+    @apply bg-healthcare-green hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+
+  .medical-badge-normal {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800;
+  }
+
+  .medical-badge-mild {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800;
+  }
+
+  .medical-badge-urgent {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800;
+  }
+
+  /* React Big Calendar Customizations */
+  .rbc-calendar {
+    @apply font-sans;
+  }
+
+  .rbc-header {
+    @apply bg-medical-blue text-white font-semibold py-3 border-medical-blue;
+  }
+
+  .rbc-month-view {
+    @apply border border-gray-200 rounded-lg overflow-hidden;
+  }
+
+  .rbc-date-cell {
+    @apply text-center py-2;
+  }
+
+  .rbc-date-cell.rbc-off-range {
+    @apply text-gray-400;
+  }
+
+  .rbc-today {
+    @apply bg-medical-blue/10 font-semibold;
+  }
+
+  .rbc-event {
+    @apply text-xs font-medium rounded-md border-0 shadow-sm;
+  }
+
+  .rbc-event:focus {
+    @apply outline-none ring-2 ring-medical-blue/50;
+  }
+
+  .rbc-slot-selection {
+    @apply bg-medical-blue/20;
+  }
+
+  .rbc-time-view .rbc-time-gutter {
+    @apply bg-gray-50 border-r border-gray-200;
+  }
+
+  .rbc-time-view .rbc-time-slot {
+    @apply border-b border-gray-100;
+  }
+
+  .rbc-time-view .rbc-current-time-indicator {
+    @apply bg-healthcare-green;
+  }
+
+  .rbc-toolbar {
+    @apply mb-4 flex justify-between items-center;
+  }
+
+  .rbc-btn-group > button {
+    @apply px-3 py-1 bg-white border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50;
+  }
+
+  .rbc-btn-group > button:first-child {
+    @apply rounded-l-md;
+  }
+
+  .rbc-btn-group > button:last-child {
+    @apply rounded-r-md;
+  }
+
+  .rbc-btn-group > button.rbc-active {
+    @apply bg-medical-blue text-white border-medical-blue;
+  }
+
+  .calendar-container .rbc-calendar {
+    @apply bg-white rounded-lg border border-gray-200;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .animate-accordion-down {
+    animation: accordion-down 0.2s ease-out;
+  }
+  
+  .animate-accordion-up {
+    animation: accordion-up 0.2s ease-out;
+  }
+}
