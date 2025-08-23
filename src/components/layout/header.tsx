@@ -3,10 +3,12 @@ import { Link, useLocation } from "wouter";
 import { Eye, Bell, ChevronDown, User, Settings, LogOut } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useSupabase";
 
 export default function Header() {
   const [location] = useLocation();
   const [, setLocation] = useLocation();
+    const { signOut, loading } = useAuth();
 
   const navItems = [
     { path: "/dashboard", label: "Dashboard" },
@@ -24,10 +26,12 @@ export default function Header() {
     return location === path;
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+     const { error } = await signOut();
     // In a real app, you'd clear authentication tokens here
-    localStorage.removeItem('auth-token');
-    setLocation('/login');
+    if(!error) {
+      setLocation('/login');
+    }
   };
 
   return (

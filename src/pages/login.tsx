@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
 import { z } from "zod";
+import { useAuth } from "@/hooks/useSupabase";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -21,6 +22,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { signIn } = useAuth();
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -33,7 +35,6 @@ export default function Login() {
   const onSubmit = async (data: LoginForm) => {
     try {
       // Use Supabase authentication
-      const { signIn } = await import('@/hooks/useSupabase');
       const result = await signIn(data.email, data.password);
       
       if (result.error) {

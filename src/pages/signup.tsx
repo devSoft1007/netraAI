@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
 import { z } from "zod";
+import { useAuth } from "@/hooks/useSupabase";
 
 const signupSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -32,6 +33,7 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { signUp } = useAuth();
 
   const form = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
@@ -50,7 +52,6 @@ export default function Signup() {
   const onSubmit = async (data: SignupForm) => {
     try {
       // Use Supabase authentication
-      const { signUp } = await import('@/hooks/useSupabase');
       const userData = {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -75,6 +76,7 @@ export default function Signup() {
         setLocation("/login");
       }
     } catch (error) {
+      console.error(error)
       toast({
         title: "Signup Failed",
         description: "Something went wrong. Please try again.",

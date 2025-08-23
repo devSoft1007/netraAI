@@ -28,12 +28,8 @@ export default defineConfig({
       index: './src/index.tsx',
     },
     define: {
-      'process.env.GA_MEASUREMENT_ID': JSON.stringify(process.env.GA_MEASUREMENT_ID),
-      "process.env.API_URL": JSON.stringify(process.env.API_URL),
-      "process.env.REPLIT_API_URL": JSON.stringify(process.env.REPLIT_API_URL),
-      "process.env.RAZORPAY_KEY_ID": JSON.stringify(process.env.RAZORPAY_KEY_ID),
-      "process.env.GOOGLE_MAPS_API_KEY": JSON.stringify(process.env.GOOGLE_MAPS_API_KEY),
-      "process.env.GOOGLE_CLIENT_ID": JSON.stringify(process.env.GOOGLE_CLIENT_ID),
+      'process.env.SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL),
+      "process.env.SUPABASE_ANON_KEY": JSON.stringify(process.env.SUPABASE_ANON_KEY),
     },
   },
 
