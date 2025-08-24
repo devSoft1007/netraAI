@@ -138,6 +138,10 @@
   --sidebar-ring: hsl(202.817, 89.121%, 53.137%);
 }
 
+button {
+  cursor: pointer;
+}
+
 @keyframes accordion-down {
   from {
     height: 0;

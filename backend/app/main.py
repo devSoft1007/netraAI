@@ -30,15 +30,19 @@ app = FastAPI(
     version="1.1.0"
 )
 
-# Add CORS middleware
+# ✅ FIX: Replace wildcard with specific origins when using credentials
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[
+        "http://localhost:2000",        # Your frontend development server
+        "http://localhost:3000",        # Alternative frontend port
+        "http://127.0.0.1:2000",        # Alternative localhost format
+        "https://yourdomain.com",       # Production frontend domain
+    ],
+    allow_credentials=True,              # This requires specific origins, not "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # Global variables for models
 dr_interpreter = None
 dr_input_details = None
@@ -316,7 +320,7 @@ async def health_check():
     }
 
 
-@app.post("/diagnose")
+@app.post("/api/ai-diagnoses")
 async def diagnose(file: UploadFile = File(None), img_url: str = Form(None)):
     """Optimized diagnostic endpoint with INT8 quantization"""
     start_time = time.time()

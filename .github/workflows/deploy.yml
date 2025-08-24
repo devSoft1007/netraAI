@@ -1,0 +1,46 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main   # Trigger when pushing to main branch
+
+permissions:
+  contents: write  # Needed to push the built site to gh-pages branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Get your repo code
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      # 2️⃣ Install pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9  # or your preferred pnpm version
+
+      # 3️⃣ Set up Node.js (needed for pnpm)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20  # match your local dev version
+          cache: 'pnpm'
+
+      # 4️⃣ Install dependencies
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 5️⃣ Build the project
+      - name: Build project
+        run: pnpm build
+
+      # 6️⃣ Deploy to GitHub Pages
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages   # Deployment branch
+          folder: dist       # Rsbuild outputs to dist/ by default
