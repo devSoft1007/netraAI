@@ -1,16 +1,59 @@
-# Local
+# --- General ---
 .DS_Store
+Thumbs.db
 *.local
 *.log*
+.env
 
-# Dist
-node_modules
-dist/
-
-# Profile
-.rspack-profile-*/
-
-# IDE
+# --- IDE / Editors ---
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# --- Frontend (React/Node) ---
+node_modules/
+dist/
+.next/
+.turbo/
+.rspack-profile-*/
+
+# --- Backend (Python/FastAPI) ---
+backend/__pycache__/
+backend/*.py[cod]
+backend/*.pyo
+backend/*.pyd
+backend/*.egg-info/
+backend/*.egg
+backend/*.manifest
+backend/*.spec
+
+# Virtual environments
+backend/.venv/
+backend/venv/
+backend/env/
+backend/ENV/
+
+# Build / Packaging
+backend/build/
+backend/develop-eggs/
+backend/dist/
+backend/.eggs/
+
+# Jupyter
+backend/.ipynb_checkpoints/
+backend/*.ipynb_save
+
+# TensorFlow / ML (ignore big training models, keep TFLite for inference)
+backend/**/*.tfrecord
+backend/**/*.h5
+backend/**/*.keras
+backend/**/*.pb
+backend/**/*.ckpt*
+backend/**/checkpoint/
+backend/**/.saved_model/
+
+# Keep optimized/quantized inference models
+!backend/**/*.tflite
+
+# --- OS ---
+ehthumbs.db
