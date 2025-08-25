@@ -15,16 +15,24 @@
         // When the single page app is loaded further down in this file,
         // the correct url will be waiting in the browser's history for
         // the single page app to route accordingly.
-       (function(l) {
-          if (l.search[13] === '/' ) {
-            var decoded = l.search.slice(1).split('&').map(function(s) { 
-              return s.replace(/~and~/g, '&')
-            }).join('?');
-            window.history.replaceState(null, null,
-                l.pathname.slice(0, -1) + decoded + l.hash
-            );
-          }
-        }(window.location))
+        (function(){
+            var redirect = sessionStorage.redirect;
+            delete sessionStorage.redirect;
+            if (redirect && redirect !== location.href) {
+              // Extract the path from the stored URL
+              var redirectUrl = new URL(redirect);
+              var currentUrl = new URL(location.href);
+              
+              // Only redirect if it's a different path
+              if (redirectUrl.pathname !== currentUrl.pathname) {
+                history.replaceState(null, null, redirectUrl.pathname + redirectUrl.search + redirectUrl.hash);
+                
+                // Trigger your SPA router to handle the new URL
+                // This depends on your framework - for vanilla JS you might need:
+                // window.dispatchEvent(new PopStateEvent('popstate'));
+              }
+            }
+          })();
       </script>
 
       </head>
