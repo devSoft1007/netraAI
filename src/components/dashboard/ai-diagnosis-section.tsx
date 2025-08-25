@@ -44,9 +44,10 @@ export default function AiDiagnosisSection() {
   const [analysisResult, setAnalysisResult] = useState<DiagnosisResponse | null>(null);
   const { toast } = useToast();
 
-  const { data: recentDiagnoses, isLoading } = useQuery<AiDiagnosis[]>({
-    queryKey: ['/'],
-  });
+  // const { data: recentDiagnoses, isLoading } = useQuery<AiDiagnosis[]>({
+  //   queryKey: ['/'],
+  // });
+  const recentDiagnoses: any = []
 
   const { data: patients } = useQuery<Patient[]>({
     queryKey: ['/api/patients'],
