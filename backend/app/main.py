@@ -2,7 +2,9 @@ import logging
 import time
 import io
 import uuid
+import os
 from typing import Optional
+from contextlib import asynccontextmanager
 
 import numpy as np
 import tensorflow as tf
@@ -12,37 +14,25 @@ from fastapi import FastAPI, File, UploadFile, Form, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-# Configure logging with Windows-compatible encoding
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
-    handlers=[
-        logging.FileHandler('netra_api.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
+# Cloud-friendly logging configuration
+if os.getenv("ENVIRONMENT") == "production":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+        handlers=[logging.StreamHandler()]  # Only console logging in production
+    )
+else:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+        handlers=[
+            logging.FileHandler('netra_api.log', encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="Netra AI - Medical Diagnostic API",
-    description="AI-powered diagnostic API with INT8 quantized models for optimal performance",
-    version="1.1.0"
-)
-
-# ✅ FIX: Replace wildcard with specific origins when using credentials
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:2000",        # Your frontend development server
-        "http://localhost:3000",        # Alternative frontend port
-        "http://127.0.0.1:2000",        # Alternative localhost format
-        "https://yourdomain.com",       # Production frontend domain
-    ],
-    allow_credentials=True,              # This requires specific origins, not "*"
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 # Global variables for models
 dr_interpreter = None
 dr_input_details = None
@@ -63,6 +53,7 @@ glaucoma_output_zero_point = None
 
 # Constants
 TARGET_SIZE = (224, 224)
+MODEL_BASE_PATH = os.getenv("MODEL_PATH", "models")
 
 DR_CLASSES = ["No DR", "Mild NPDR", "Moderate NPDR", "Severe NPDR", "Proliferative DR"]
 GLAUCOMA_CLASSES = ["Normal", "Glaucoma"]
@@ -85,7 +76,6 @@ MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
 # Pre-allocated arrays for memory optimization
 IMG_BUFFER = np.zeros((1, 224, 224, 3), dtype=np.float32)
 
-
 def load_models():
     """Load INT8 quantized TFLite models with threading optimization"""
     global dr_interpreter, dr_input_details, dr_output_details
@@ -98,14 +88,14 @@ def load_models():
         # Try to load quantized model first, fallback to regular model
         try:
             dr_interpreter = tf.lite.Interpreter(
-                model_path="models/DR/dr_model_int8.tflite",
+                model_path=f"{MODEL_BASE_PATH}/DR/dr_model_int8.tflite",
                 num_threads=4
             )
             logger.info("Loaded INT8 quantized DR model")
         except:
             logger.warning("INT8 DR model not found, using regular model")
             dr_interpreter = tf.lite.Interpreter(
-                model_path="models/DR/dr_model.tflite",
+                model_path=f"{MODEL_BASE_PATH}/DR/dr_model.tflite",
                 num_threads=4
             )
         
@@ -126,14 +116,14 @@ def load_models():
         # Try to load quantized model first, fallback to regular model
         try:
             glaucoma_interpreter = tf.lite.Interpreter(
-                model_path="models/Glaucoma/glaucoma_model_int8.tflite",
+                model_path=f"{MODEL_BASE_PATH}/Glaucoma/glaucoma_model_int8.tflite",
                 num_threads=4
             )
             logger.info("Loaded INT8 quantized Glaucoma model")
         except:
             logger.warning("INT8 Glaucoma model not found, using regular model")
             glaucoma_interpreter = tf.lite.Interpreter(
-                model_path="models/Glaucoma/glaucoma_model.tflite",
+                model_path=f"{MODEL_BASE_PATH}/Glaucoma/glaucoma_model.tflite",
                 num_threads=4
             )
         
@@ -154,7 +144,6 @@ def load_models():
         logger.error(f"Failed to load models: {str(e)}")
         raise
 
-
 def validate_image(image: Image.Image) -> bool:
     """Validate image format and size"""
     if image.mode not in ['RGB', 'RGBA', 'L']:
@@ -166,7 +155,6 @@ def validate_image(image: Image.Image) -> bool:
         return False
     
     return True
-
 
 def preprocess_image_quantized(image: Image.Image, target_size: tuple = TARGET_SIZE) -> tuple:
     """Memory-optimized preprocessing with quantization support"""
@@ -192,7 +180,6 @@ def preprocess_image_quantized(image: Image.Image, target_size: tuple = TARGET_S
     
     return IMG_BUFFER.copy()  # Return copy for thread safety
 
-
 def quantize_input(img_array: np.ndarray, scale: float, zero_point: int) -> np.ndarray:
     """Convert float32 input to INT8 for quantized models"""
     if scale == 1.0 and zero_point == 0:
@@ -204,7 +191,6 @@ def quantize_input(img_array: np.ndarray, scale: float, zero_point: int) -> np.n
     quantized = np.clip(quantized, -128, 127).astype(np.int8)
     return quantized
 
-
 def dequantize_output(quantized_output: np.ndarray, scale: float, zero_point: int) -> np.ndarray:
     """Convert INT8 output back to float32"""
     if scale == 1.0 and zero_point == 0:
@@ -213,7 +199,6 @@ def dequantize_output(quantized_output: np.ndarray, scale: float, zero_point: in
     
     # Dequantize: f = scale * (q - zero_point)
     return scale * (quantized_output.astype(np.float32) - zero_point)
-
 
 def predict_with_tflite_quantized(interpreter, input_details, output_details, 
                                  img_array: np.ndarray, input_scale: float, 
@@ -247,7 +232,6 @@ def predict_with_tflite_quantized(interpreter, input_details, output_details,
     except Exception as e:
         logger.error(f"Quantized TFLite inference failed: {str(e)}")
         raise
-
 
 async def load_image_from_source(file: Optional[UploadFile], img_url: Optional[str]) -> Image.Image:
     """Load image from file or URL with validation"""
@@ -283,6 +267,57 @@ async def load_image_from_source(file: Optional[UploadFile], img_url: Optional[s
         logger.error(f"Failed to load image: {str(e)}")
         raise
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    try:
+        logger.info("Starting Netra AI with INT8 quantization optimizations...")
+        load_models()
+        
+        # Warmup models
+        logger.info("Warming up quantized models...")
+        dummy = np.zeros((1, TARGET_SIZE[0], TARGET_SIZE[1], 3), dtype=np.float32)
+        
+        predict_with_tflite_quantized(
+            dr_interpreter, dr_input_details, dr_output_details, dummy,
+            dr_input_scale, dr_input_zero_point, dr_output_scale, dr_output_zero_point
+        )
+        predict_with_tflite_quantized(
+            glaucoma_interpreter, glaucoma_input_details, glaucoma_output_details, dummy,
+            glaucoma_input_scale, glaucoma_input_zero_point, glaucoma_output_scale, glaucoma_output_zero_point
+        )
+        
+        logger.info("Netra AI ready with INT8 quantization!")
+    except Exception as e:
+        logger.error(f"Failed to start: {str(e)}")
+        raise
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down Netra AI...")
+
+# Initialize FastAPI app with lifespan
+app = FastAPI(
+    title="Netra AI - Medical Diagnostic API",
+    description="AI-powered diagnostic API with INT8 quantized models for optimal performance",
+    version="1.1.0",
+    lifespan=lifespan
+)
+
+# Updated CORS configuration for your frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://devsoft1007.github.io",    # Your GitHub Pages frontend
+        "http://localhost:2000",            # Local development
+        "http://localhost:3000",            # Alternative dev port
+        "http://127.0.0.1:2000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -297,17 +332,34 @@ async def log_requests(request: Request, call_next):
     
     return response
 
+@app.get("/")
+async def root():
+    """Root endpoint for Render health checks"""
+    return {
+        "message": "Netra AI - Medical Diagnostic API",
+        "version": "1.1.0",
+        "status": "healthy",
+        "environment": os.getenv("ENVIRONMENT", "development")
+    }
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    # Check if models are quantized
+    """Detailed health check endpoint"""
+    models_loaded = dr_interpreter is not None and glaucoma_interpreter is not None
+    
+    if not models_loaded:
+        return JSONResponse(
+            content={"status": "unhealthy", "error": "Models not loaded"},
+            status_code=503
+        )
+    
     dr_quantized = dr_input_details[0]['dtype'] == np.int8 if dr_input_details else False
     glaucoma_quantized = glaucoma_input_details[0]['dtype'] == np.int8 if glaucoma_input_details else False
     
     return {
         "status": "healthy", 
-        "models_loaded": dr_interpreter is not None and glaucoma_interpreter is not None,
+        "models_loaded": models_loaded,
+        "environment": os.getenv("ENVIRONMENT", "development"),
         "optimizations": {
             "image_size": f"{TARGET_SIZE[0]}x{TARGET_SIZE[1]}",
             "multi_threading": "enabled",
@@ -318,7 +370,6 @@ async def health_check():
             }
         }
     }
-
 
 @app.post("/api/ai-diagnoses")
 async def diagnose(file: UploadFile = File(None), img_url: str = Form(None)):
@@ -421,40 +472,6 @@ async def diagnose(file: UploadFile = File(None), img_url: str = Form(None)):
             content={"error": f"Error processing image: {str(e)}", "request_id": request_id},
             status_code=500
         )
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize models and warmup"""
-    try:
-        logger.info("Starting Netra AI with INT8 quantization optimizations...")
-        
-        load_models()
-        
-        # Warmup with correct input size
-        logger.info("Warming up quantized models...")
-        dummy = np.zeros((1, TARGET_SIZE[0], TARGET_SIZE[1], 3), dtype=np.float32)
-        
-        predict_with_tflite_quantized(
-            dr_interpreter, dr_input_details, dr_output_details, dummy,
-            dr_input_scale, dr_input_zero_point, dr_output_scale, dr_output_zero_point
-        )
-        predict_with_tflite_quantized(
-            glaucoma_interpreter, glaucoma_input_details, glaucoma_output_details, dummy,
-            glaucoma_input_scale, glaucoma_input_zero_point, glaucoma_output_scale, glaucoma_output_zero_point
-        )
-        
-        logger.info("Netra AI ready with INT8 quantization!")
-        
-    except Exception as e:
-        logger.error(f"Failed to start: {str(e)}")
-        raise
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("Shutting down Netra AI...")
-
 
 @app.get("/performance")
 async def performance_stats():
