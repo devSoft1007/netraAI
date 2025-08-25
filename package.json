@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "homepage": "https://devsoft1007.github.io/netraAI",
   "scripts": {
     "build": "rsbuild build",
     "check": "biome check --write",
