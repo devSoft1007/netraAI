@@ -41,9 +41,9 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Router base={base}>
+        {/* <Router base={base}> */}
         <AuthWrapper />
-        </Router>
+        {/* </Router> */}
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

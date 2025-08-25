@@ -39,9 +39,10 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Eye className="text-medical-blue text-2xl" />
-              <h1 className="text-xl font-semibold text-professional-dark">EyeCare Pro</h1>
+            <div className="w-[82px]">
+              <img src='/images/netra-AI-logo.png' alt="logo" className="w-full h-full" />
+              {/* <Eye className="text-medical-blue text-2xl" />
+              <h1 className="text-xl font-semibold text-professional-dark">EyeCare Pro</h1> */}
             </div>
             <nav className="hidden md:flex space-x-8 ml-8">
               {navItems.map((item) => (
