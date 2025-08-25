@@ -46,6 +46,6 @@ export default defineConfig({
       js: false,
     },
     polyfill: 'usage',
-    assetPrefix: 'https://devsoft1007.github.io/netraAI/',
+    assetPrefix: './',
   },
 });
