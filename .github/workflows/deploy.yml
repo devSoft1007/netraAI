@@ -36,6 +36,10 @@ jobs:
 
       # 5️⃣ Build the project
       - name: Build project
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          NETRA_AI_ENDPOINT: ${{ secrets.NETRA_AI_ENDPOINT }}
         run: pnpm build
 
       # 6️⃣ Deploy to GitHub Pages
