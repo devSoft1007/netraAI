@@ -3,48 +3,60 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main   # Trigger when pushing to main branch
+      - main
 
 permissions:
-  contents: write  # Needed to push the built site to gh-pages branch
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Get your repo code
       - name: Checkout 🛎️
         uses: actions/checkout@v4
 
-      # 2️⃣ Install pnpm
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9  # or your preferred pnpm version
+          version: 9
 
-      # 3️⃣ Set up Node.js (needed for pnpm)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20  # match your local dev version
+          node-version: 20
           cache: 'pnpm'
 
-      # 4️⃣ Install dependencies
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      # 5️⃣ Build the project
+      - name: Verify required secrets exist
+        run: |
+          if [ -z "${{ secrets.SUPABASE_URL }}" ] || [ -z "${{ secrets.SUPABASE_ANON_KEY }}" ] || [ -z "${{ secrets.NETRA_AI_ENDPOINT }}" ]; then
+            echo "ERROR: One or more required secrets are missing."
+            exit 1
+          fi
+          echo "All required secrets are present."
+
+      # Make env vars available to rsbuild/Vite by writing a .env (use appropriate prefix for your framework)
+      - name: Create .env for build
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "NETRA_AI_ENDPOINT=${{ secrets.NETRA_AI_ENDPOINT }}" >> .env
+
       - name: Build project
+        run: pnpm build
         env:
+          # Optionally still expose for the build environment in case some libraries read process.env
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           NETRA_AI_ENDPOINT: ${{ secrets.NETRA_AI_ENDPOINT }}
-        run: pnpm build
 
-      # 6️⃣ Deploy to GitHub Pages
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: gh-pages   # Deployment branch
-          folder: dist       # Rsbuild outputs to dist/ by default
+          branch: gh-pages
+          folder: dist
