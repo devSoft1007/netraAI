@@ -32,7 +32,7 @@ jobs:
 
       # 4️⃣ Install dependencies
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       # 5️⃣ Build the project
       - name: Build project
