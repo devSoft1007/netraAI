@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Mail, Lock, User, Phone, Stethoscope } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone, Stethoscope, Building2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,12 @@ const signupSchema = z.object({
   phone: z.string().min(10, "Please enter a valid phone number"),
   specialty: z.string().min(1, "Please select your specialty"),
   licenseNumber: z.string().min(5, "Please enter your medical license number"),
+  // Clinic Information
+  clinicName: z.string().min(2, "Clinic name must be at least 2 characters"),
+  clinicAddress: z.string().min(10, "Please enter a complete clinic address"),
+  clinicPhone: z.string().min(10, "Please enter a valid clinic phone number"),
+  clinicEmail: z.string().email("Please enter a valid clinic email address"),
+  clinicLicenseNumber: z.string().min(5, "Please enter your clinic license number"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -44,6 +50,11 @@ export default function Signup() {
       phone: "",
       specialty: "",
       licenseNumber: "",
+      clinicName: "",
+      clinicAddress: "",
+      clinicPhone: "",
+      clinicEmail: "",
+      clinicLicenseNumber: "",
       password: "",
       confirmPassword: "",
     },
@@ -57,7 +68,12 @@ export default function Signup() {
         lastName: data.lastName,
         phone: data.phone,
         specialty: data.specialty,
-        licenseNumber: data.licenseNumber
+        licenseNumber: data.licenseNumber,
+        clinicName: data.clinicName,
+        clinicAddress: data.clinicAddress,
+        clinicPhone: data.clinicPhone,
+        clinicEmail: data.clinicEmail,
+        clinicLicenseNumber: data.clinicLicenseNumber
       };
       
       const result = await signUp(data.email, data.password, userData);
@@ -239,6 +255,120 @@ export default function Signup() {
                         <FormControl>
                           <Input
                             placeholder="MD123456"
+                            className="h-11"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Clinic Information Section */}
+                <div className="space-y-4 pt-4 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold text-professional-dark flex items-center space-x-2">
+                    <Building2 className="h-5 w-5" />
+                    <span>Clinic Information</span>
+                  </h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="clinicName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center space-x-1">
+                          <Building2 className="h-4 w-4" />
+                          <span>Clinic Name</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="EyeCare Medical Center"
+                            className="h-11"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="clinicAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center space-x-1">
+                          <MapPin className="h-4 w-4" />
+                          <span>Clinic Address</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="123 Medical Plaza, Suite 100, City, State 12345"
+                            className="h-11"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="clinicPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center space-x-1">
+                            <Phone className="h-4 w-4" />
+                            <span>Clinic Phone</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="tel"
+                              placeholder="(555) 987-6543"
+                              className="h-11"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="clinicEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center space-x-1">
+                            <Mail className="h-4 w-4" />
+                            <span>Clinic Email</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="info@eyecarecenter.com"
+                              className="h-11"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="clinicLicenseNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Clinic License Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="CLI123456"
                             className="h-11"
                             {...field}
                           />

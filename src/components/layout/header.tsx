@@ -1,13 +1,23 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Eye, Bell, ChevronDown, User, Settings, LogOut } from "lucide-react";
+import { Bell, ChevronDown, User, Settings, LogOut } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Header() {
   const [location] = useLocation();
-  const { logoutAndRedirect } = useAuth();
+  const { logoutAndRedirect, user } = useAuth();
+
+  // Extract user details with fallbacks
+  const userEmail = user?.email || '';
+  const userMetadata = user?.user_metadata || {};
+  const userName = userMetadata.full_name || userMetadata.name || userEmail.split('@')[0];
+  const userInitials = userName
+    .split(' ')
+    .map((name: string) => name.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'U';
 
   const navItems = [
     { path: "/dashboard", label: "Dashboard" },
@@ -66,16 +76,16 @@ export default function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2 h-auto p-2">
                   <div className="w-8 h-8 bg-medical-blue rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">DR</span>
+                    <span className="text-white text-sm font-medium">{userInitials}</span>
                   </div>
-                  <span className="hidden sm:block text-sm font-medium">Dr. Rodriguez</span>
+                  <span className="hidden sm:block text-sm font-medium">{userName}</span>
                   <ChevronDown className="text-gray-400 text-sm" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <div className="px-2 py-2">
-                  <p className="text-sm font-medium">Dr. Maria Rodriguez</p>
-                  <p className="text-xs text-gray-500">maria.rodriguez@eyecare.com</p>
+                  <p className="text-sm font-medium">{userName}</p>
+                  <p className="text-xs text-gray-500">{userEmail}</p>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
