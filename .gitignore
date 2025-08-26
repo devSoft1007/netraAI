@@ -4,6 +4,8 @@ Thumbs.db
 *.local
 *.log*
 .env
+.env.production
+.env.development
 
 # --- IDE / Editors ---
 .vscode/*
