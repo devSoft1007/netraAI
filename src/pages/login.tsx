@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { z } from "zod";
-import { useAuth } from "@/hooks/useSupabase";
+import { useAuth } from "@/hooks/useAuth";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -20,9 +20,9 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
-  const [, setLocation] = useLocation();
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { signIn } = useAuth();
+  const { loginAndRedirect } = useAuth();
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -33,14 +33,14 @@ export default function Login() {
   });
 
   const onSubmit = async (data: LoginForm) => {
+    setIsLoading(true);
     try {
-      // Use Supabase authentication
-      const result = await signIn(data.email, data.password);
+      const { error } = await loginAndRedirect(data.email, data.password, "/dashboard");
       
-      if (result.error) {
+      if (error) {
         toast({
           title: "Login Failed",
-          description: result.error.message,
+          description: error.message,
           variant: "destructive",
         });
       } else {
@@ -48,7 +48,7 @@ export default function Login() {
           title: "Login Successful",
           description: "Welcome back to EyeCare Pro!",
         });
-        setLocation("/dashboard");
+        // Navigation handled by loginAndRedirect
       }
     } catch (error) {
       toast({
@@ -56,6 +56,8 @@ export default function Login() {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -150,9 +152,9 @@ export default function Login() {
                 <Button
                   type="submit"
                   className="w-full h-11 medical-button-primary"
-                  disabled={form.formState.isSubmitting}
+                  disabled={isLoading || form.formState.isSubmitting}
                 >
-                  {form.formState.isSubmitting ? "Signing in..." : "Sign In"}
+                  {(isLoading || form.formState.isSubmitting) ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
             </Form>

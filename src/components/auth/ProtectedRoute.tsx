@@ -6,9 +6,14 @@ import { Loader2 } from 'lucide-react'
 interface ProtectedRouteProps {
   children: React.ReactNode
   redirectTo?: string
+  fallback?: React.ReactNode
 }
 
-export default function ProtectedRoute({ children, redirectTo = '/login' }: ProtectedRouteProps) {
+export default function ProtectedRoute({ 
+  children, 
+  redirectTo = '/login',
+  fallback 
+}: ProtectedRouteProps) {
   const { user, loading } = useAuthContext()
   const [, setLocation] = useLocation()
 
@@ -19,18 +24,18 @@ export default function ProtectedRoute({ children, redirectTo = '/login' }: Prot
   }, [user, loading, setLocation, redirectTo])
 
   if (loading) {
-    return (
+    return fallback || (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-medical-blue" />
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">Authenticating...</p>
         </div>
       </div>
     )
   }
 
   if (!user) {
-    return null
+    return null // Will redirect via useEffect
   }
 
   return <>{children}</>

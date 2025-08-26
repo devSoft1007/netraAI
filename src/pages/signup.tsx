@@ -73,7 +73,10 @@ export default function Signup() {
           title: "Account Created Successfully",
           description: "Check your email for a confirmation link.",
         });
-        setLocation("/login");
+  // Redirect to a dedicated registration success page where we ask the user to verify their email
+  // include the user's email in the query string so the success page can display it
+  const encodedEmail = encodeURIComponent(data.email);
+  setLocation(`/registration-success?email=${encodedEmail}`);
       }
     } catch (error) {
       console.error(error)
