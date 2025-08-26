@@ -4,8 +4,10 @@
   <meta charset="utf-8">
   <title>NetraAI - Redirecting</title>
   <script type="text/javascript">
-    // Store the attempted URL
-    sessionStorage.redirect = location.href;
+    // Store the attempted URL (only for GitHub Pages, not localhost)
+    if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      sessionStorage.redirect = location.href;
+    }
   </script>
   <meta http-equiv="refresh" content="0;URL='/'">
 </head>
