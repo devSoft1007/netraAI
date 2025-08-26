@@ -15,24 +15,27 @@
         // When the single page app is loaded further down in this file,
         // the correct url will be waiting in the browser's history for
         // the single page app to route accordingly.
-        (function(){
-            var redirect = sessionStorage.redirect;
-            delete sessionStorage.redirect;
-            if (redirect && redirect !== location.href) {
-              // Extract the path from the stored URL
-              var redirectUrl = new URL(redirect);
-              var currentUrl = new URL(location.href);
-              
-              // Only redirect if it's a different path
-              if (redirectUrl.pathname !== currentUrl.pathname) {
-                history.replaceState(null, null, redirectUrl.pathname + redirectUrl.search + redirectUrl.hash);
+        // Only run this redirect logic on GitHub Pages, not localhost
+        if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+          (function(){
+              var redirect = sessionStorage.redirect;
+              delete sessionStorage.redirect;
+              if (redirect && redirect !== location.href) {
+                // Extract the path from the stored URL
+                var redirectUrl = new URL(redirect);
+                var currentUrl = new URL(location.href);
                 
-                // Trigger your SPA router to handle the new URL
-                // This depends on your framework - for vanilla JS you might need:
-                // window.dispatchEvent(new PopStateEvent('popstate'));
+                // Only redirect if it's a different path
+                if (redirectUrl.pathname !== currentUrl.pathname) {
+                  history.replaceState(null, null, redirectUrl.pathname + redirectUrl.search + redirectUrl.hash);
+                  
+                  // Trigger your SPA router to handle the new URL
+                  // This depends on your framework - for vanilla JS you might need:
+                  // window.dispatchEvent(new PopStateEvent('popstate'));
+                }
               }
-            }
-          })();
+            })();
+        }
       </script>
 
       </head>
