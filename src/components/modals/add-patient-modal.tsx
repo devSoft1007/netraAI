@@ -74,7 +74,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+  <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2 text-xl font-semibold text-professional-dark">
