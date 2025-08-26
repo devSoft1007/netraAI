@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-  "build": "cross-env NODE_ENV=production rsbuild build",
+    "build": "cross-env NODE_ENV=production rsbuild build",
     "check": "biome check --write",
     "dev": "rsbuild dev --open",
     "format": "prettier --write .",

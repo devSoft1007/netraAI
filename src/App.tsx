@@ -17,6 +17,8 @@ import './App.css';
 
 const base = process.env.NODE_ENV === 'production' ? '/netraAI' : '';
 
+console.log('Base URL:', base);
+
 function AppRouter() {
   return (
     <Switch>
