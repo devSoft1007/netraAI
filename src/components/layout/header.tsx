@@ -36,10 +36,14 @@ export default function Header() {
   };
 
   const handleLogout = async () => {
-    const { error } = await logoutAndRedirect('/login');
-    // Error handling is done in the logoutAndRedirect function
-    if (error) {
-      console.error('Logout error:', error);
+    try {
+      const { error } = await logoutAndRedirect('/login');
+      // Error handling is done in the logoutAndRedirect function
+      if (error) {
+        console.error('Logout error:', error);
+      }
+    } catch (err) {
+      console.error('Unexpected logout error:', err);
     }
   };
 
