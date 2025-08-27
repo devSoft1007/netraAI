@@ -21,10 +21,8 @@ export const mockPatients: InsertPatient[] = [
     insuranceGroupNumber: "1001",
     emergencyContactName: "Michael Johnson",
     emergencyContactPhone: "(555) 123-4568",
-    medicalHistory: [
-      { condition: "Myopia (Nearsightedness)", diagnosedDate: "2020-01-15", status: "ongoing" },
-      { condition: "Dry Eye Syndrome", diagnosedDate: "2021-03-10", status: "managed" }
-    ],
+  medicalHistory: `Myopia (Nearsightedness) — Diagnosed: 2020-01-15 — ongoing
+Dry Eye Syndrome — Diagnosed: 2021-03-10 — managed`,
     allergies: ["Penicillin", "Latex"],
     currentMedications: ["Artificial tears", "Reading glasses"],
     isActive: true,
@@ -42,9 +40,7 @@ export const mockPatients: InsertPatient[] = [
     insuranceGroupNumber: "2002",
     emergencyContactName: "Lisa Chen",
     emergencyContactPhone: "(555) 234-5679",
-    medicalHistory: [
-      { condition: "Diabetic Retinopathy", diagnosedDate: "2022-06-01", status: "monitored" }
-    ],
+  medicalHistory: `Diabetic Retinopathy — Diagnosed: 2022-06-01 — monitored`,
     allergies: [],
     currentMedications: ["Metformin", "Eye drops"],
     isActive: true,
@@ -62,7 +58,7 @@ export const mockPatients: InsertPatient[] = [
     insuranceGroupNumber: "3003",
     emergencyContactName: "Robert Davis",
     emergencyContactPhone: "(555) 345-6790",
-    medicalHistory: [],
+  medicalHistory: undefined,
     allergies: ["Shellfish"],
     currentMedications: [],
     isActive: true,
@@ -80,10 +76,8 @@ export const mockPatients: InsertPatient[] = [
     insuranceGroupNumber: "4004",
     emergencyContactName: "Patricia Williams",
     emergencyContactPhone: "(555) 456-7891",
-    medicalHistory: [
-      { condition: "Glaucoma", diagnosedDate: "2023-01-20", status: "treatment" },
-      { condition: "Cataracts", diagnosedDate: "2023-08-15", status: "planned_surgery" }
-    ],
+  medicalHistory: `Glaucoma — Diagnosed: 2023-01-20 — treatment
+Cataracts — Diagnosed: 2023-08-15 — planned_surgery`,
     allergies: ["Iodine"],
     currentMedications: ["Glaucoma eye drops", "Blood pressure medication"],
     isActive: true,
@@ -101,9 +95,7 @@ export const mockPatients: InsertPatient[] = [
     insuranceGroupNumber: "5005",
     emergencyContactName: "David Thompson",
     emergencyContactPhone: "(555) 567-8902",
-    medicalHistory: [
-      { condition: "Macular Degeneration", diagnosedDate: "2023-05-10", status: "early_stage" }
-    ],
+  medicalHistory: `Macular Degeneration — Diagnosed: 2023-05-10 — early_stage`,
     allergies: [],
     currentMedications: ["Vitamin supplements", "Anti-VEGF injections"],
     isActive: true,

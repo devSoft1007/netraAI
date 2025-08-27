@@ -191,28 +191,10 @@ export default function PatientModal({ patient, isOpen, onClose }: PatientModalP
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {patient.medicalHistory && Array.isArray(patient.medicalHistory) && patient.medicalHistory.length > 0 ? (
-                        patient.medicalHistory.map((condition: any, index: number) => (
-                          <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-professional-dark">
-                                  {condition.condition || 'Medical Condition'}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {condition.diagnosedDate ? `Diagnosed: ${format(new Date(condition.diagnosedDate), 'MMM yyyy')}` : 'Date unknown'}
-                                </p>
-                              </div>
-                              <Badge className={condition.status === 'active' ? 'medical-badge-mild' : 'medical-badge-normal'}>
-                                {condition.status || 'Ongoing'}
-                              </Badge>
-                            </div>
-                          </div>
-                        ))
+                      {patient.medicalHistory ? (
+                        <div className="whitespace-pre-wrap text-sm text-gray-700">{patient.medicalHistory}</div>
                       ) : (
-                        <div className="text-center py-4 text-gray-500">
-                          No medical conditions recorded
-                        </div>
+                        <div className="text-center py-4 text-gray-500">No medical conditions recorded</div>
                       )}
                     </div>
                   </CardContent>

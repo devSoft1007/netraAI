@@ -15,7 +15,8 @@ export const patientSchema = z.object({
   insuranceGroupNumber: z.string().optional(),
   emergencyContactName: z.string().optional(),
   emergencyContactPhone: z.string().optional(),
-  medicalHistory: z.array(z.any()).default([]),
+  // Store medical history as a free-form textarea string
+  medicalHistory: z.string().optional(),
   allergies: z.array(z.string()).default([]),
   currentMedications: z.array(z.string()).default([]),
   memberSince: z.date(),
@@ -167,30 +168,30 @@ export type InsertTask = z.infer<typeof insertTaskSchema>;
 
 // Helper function to transform API response dates
 export const transformDatesFromAPI = <T extends Record<string, any>>(data: T): T => {
-  const transformed = { ...data };
-  
+  const transformed = { ...data } as Record<string, any>;
+
   // Convert string dates to Date objects
-  Object.keys(transformed).forEach(key => {
-    if (key.includes('Date') || key.includes('At') || key === 'memberSince') {
-      if (typeof transformed[key] === 'string') {
+  Object.keys(transformed).forEach((key) => {
+    if (key.includes("Date") || key.includes("At") || key === "memberSince") {
+      if (typeof transformed[key] === "string") {
         transformed[key] = new Date(transformed[key]);
       }
     }
   });
-  
-  return transformed;
+
+  return transformed as T;
 };
 
 // Helper function to transform dates for API requests
 export const transformDatesForAPI = <T extends Record<string, any>>(data: T): T => {
-  const transformed = { ...data };
-  
+  const transformed = { ...data } as Record<string, any>;
+
   // Convert Date objects to ISO strings
-  Object.keys(transformed).forEach(key => {
+  Object.keys(transformed).forEach((key) => {
     if (transformed[key] instanceof Date) {
       transformed[key] = transformed[key].toISOString();
     }
   });
-  
-  return transformed;
+
+  return transformed as T;
 };

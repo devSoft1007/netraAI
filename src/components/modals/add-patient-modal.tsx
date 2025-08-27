@@ -31,13 +31,14 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
       lastName: "",
       email: "",
       phone: "",
-      dateOfBirth: new Date(),
-      gender: "",
-      address: "",
-      emergencyContactName: null,
-      emergencyContactPhone: null,
-      insuranceProvider: null,
-      medicalHistory: null,
+  dateOfBirth: new Date(),
+  gender: "",
+  address: "",
+  // optional fields: initialize as undefined/empty array so Zod won't see null
+  emergencyContactName: undefined,
+  emergencyContactPhone: undefined,
+  insuranceProvider: undefined,
+  medicalHistory: undefined,
     },
   });
 
@@ -65,7 +66,17 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
   });
 
   const onSubmit = (data: InsertPatient) => {
-    addPatientMutation.mutate(data);
+    // Build payload but avoid sending nulls: use undefined for empty optional strings.
+    const payload = {
+      ...data,
+      emergencyContactName: data.emergencyContactName ? data.emergencyContactName : undefined,
+      emergencyContactPhone: data.emergencyContactPhone ? data.emergencyContactPhone : undefined,
+      insuranceProvider: data.insuranceProvider ? data.insuranceProvider : undefined,
+      // medicalHistory is a free-form string (textarea); keep as-is or undefined
+      medicalHistory: typeof data.medicalHistory === 'string' && data.medicalHistory.trim().length > 0 ? data.medicalHistory : undefined,
+    } as InsertPatient;
+
+    addPatientMutation.mutate(payload);
   };
 
   const handleClose = () => {
@@ -237,7 +248,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                       <FormItem>
                         <FormLabel>Emergency Contact Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Contact person name" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} />
+                          <Input placeholder="Contact person name" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -251,7 +262,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                       <FormItem>
                         <FormLabel>Emergency Contact Phone</FormLabel>
                         <FormControl>
-                          <Input placeholder="(555) 987-6543" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} />
+                          <Input placeholder="(555) 987-6543" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -274,7 +285,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                     <FormItem>
                       <FormLabel>Insurance Information</FormLabel>
                       <FormControl>
-                        <Input placeholder="Insurance provider and policy details" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || null)} />
+                        <Input placeholder="Insurance provider and policy details" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -288,11 +299,11 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                     <FormItem>
                       <FormLabel>Medical History</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Previous medical conditions, allergies, medications, surgical history..." 
-                          className="min-h-[120px]" 
-                          value={typeof field.value === 'string' ? field.value : ''}
-                          onChange={(e) => field.onChange(e.target.value || null)}
+                        <Textarea
+                          placeholder="Previous medical conditions, allergies, medications, surgical history... (one per line)"
+                          className="min-h-[120px]"
+                          value={Array.isArray(field.value) ? field.value.join('\n') : (typeof field.value === 'string' ? field.value : '')}
+                          onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
                       <FormMessage />
