@@ -1,18 +1,14 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, User, Mail, Phone, MapPin, Calendar } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAddPatient } from "@/services/use-patient";
 import { insertPatientSchema, type InsertPatient } from "@shared/schema";
 
 interface AddPatientModalProps {
@@ -21,8 +17,7 @@ interface AddPatientModalProps {
 }
 
 export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProps) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const addPatientMutation = useAddPatient();
 
   const form = useForm<InsertPatient>({
     resolver: zodResolver(insertPatientSchema),
@@ -42,29 +37,6 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
     },
   });
 
-  const addPatientMutation = useMutation({
-    mutationFn: async (data: InsertPatient) => {
-      const response = await apiRequest('POST', '/api/patients', data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/patients'] });
-      toast({
-        title: "Patient Added Successfully",
-        description: "New patient has been registered in the system.",
-      });
-      form.reset();
-      onClose();
-    },
-    onError: () => {
-      toast({
-        title: "Error Adding Patient",
-        description: "Failed to add new patient. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const onSubmit = (data: InsertPatient) => {
     // Build payload but avoid sending nulls: use undefined for empty optional strings.
     const payload = {
@@ -76,7 +48,13 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
       medicalHistory: typeof data.medicalHistory === 'string' && data.medicalHistory.trim().length > 0 ? data.medicalHistory : undefined,
     } as InsertPatient;
 
-    addPatientMutation.mutate(payload);
+    // Call the edge function with the patient data
+    addPatientMutation.mutate(payload, {
+      onSuccess: () => {
+        form.reset();
+        onClose();
+      }
+    });
   };
 
   const handleClose = () => {
