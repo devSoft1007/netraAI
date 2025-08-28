@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { usePatientById, useUpdatePatient } from '@/services/use-patient/use-patient'
 import { X, User, Calendar, Stethoscope, DollarSign, Phone, Mail, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,6 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
-import { useUpdatePatient } from '@/services/use-patient';
 import type { Patient, Appointment, Procedure, Payment } from "@shared/schema";
 
 interface PatientModalProps {
@@ -42,12 +42,49 @@ export default function PatientModal({ patient, isOpen, onClose }: PatientModalP
 
   const updatePatientMutation = useUpdatePatient();
 
+  // Fetch the full patient payload from the Edge Function and pre-populate modal fields
+  const { data: patientByIdData } = usePatientById(patient?.id)
+
   // Local editable state derived from the patient prop
   const [editedPatient, setEditedPatient] = useState<Partial<Patient> & Record<string, any>>(() => ({ ...patient }));
 
   useEffect(() => {
     setEditedPatient({ ...patient });
   }, [patient]);
+
+  // When the edge function returns the formatted patient, map it into the editor state.
+  useEffect(() => {
+    if (!patientByIdData?.patient || !isOpen) return
+
+    const p: any = patientByIdData.patient
+
+    // Split name into first/last
+    const nameParts = (p.name || '').trim().split(/\s+/)
+    const firstName = nameParts.shift() || ''
+    const lastName = nameParts.join(' ') || ''
+
+    const emergency = p.emergencyContact || p.emergency_contact || {}
+
+    setEditedPatient(prev => ({
+      ...prev,
+      firstName,
+      lastName,
+      dateOfBirth: p.dateOfBirth ?? p.dateOfBirth ?? prev.dateOfBirth,
+      email: p.email ?? prev.email,
+      phone: p.phone ?? prev.phone,
+      address: p.address ?? prev.address,
+      insuranceProvider: p.insurance ?? prev.insuranceProvider ?? '',
+      insurancePolicyNumber: prev.insurancePolicyNumber ?? '',
+      insuranceGroupNumber: prev.insuranceGroupNumber ?? '',
+      medicalHistory: p.medicalHistory ?? prev.medicalHistory,
+      currentMedications: p.currentMedications ?? prev.currentMedications ?? [],
+      allergies: p.allergies ?? prev.allergies ?? [],
+      emergencyContactName: emergency?.name || emergency?.fullName || emergency?.contactName || prev.emergencyContactName || '',
+      emergencyContactPhone: emergency?.phone || emergency?.contactPhone || prev.emergencyContactPhone || '',
+      isActive: typeof p.isActive === 'boolean' ? p.isActive : (p.status === 'Active' || prev.isActive),
+      memberSince: p.memberSince ?? prev.memberSince,
+    }))
+  }, [patientByIdData, isOpen])
 
   if (!patient) return null;
 

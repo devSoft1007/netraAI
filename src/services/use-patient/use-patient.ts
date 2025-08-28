@@ -164,6 +164,61 @@ export function usePatient(patientId: string) {
   return useSupabaseQuery('patients', '*', { id: patientId })
 }
 
+// Hook for fetching a single patient by ID via the Edge Function
+export function usePatientById(patientId?: string) {
+  const { toast } = useToast()
+
+  return useQuery<{ success: boolean; patient: Patient }, Error>({
+    queryKey: ['patientById', patientId],
+    queryFn: async (): Promise<{ success: boolean; patient: Patient }> => {
+      try {
+        if (!patientId) throw new Error('Patient ID is required')
+
+        // Ensure we have a valid session
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) throw new Error('No authenticated session found')
+
+        // Build URL for the edge function and include id as query param
+        const url = new URL(`${process.env.SUPABASE_URL}/functions/v1/get-patient-by-id`)
+        url.searchParams.set('id', patientId)
+
+        const res = await fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!res.ok) {
+          const text = await res.text()
+          let parsed: any = {}
+          try { parsed = JSON.parse(text) } catch { parsed = { message: text } }
+          throw new Error(parsed?.error || parsed?.message || `HTTP error ${res.status}`)
+        }
+
+        const data = await res.json()
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch patient')
+        }
+
+        return data
+      } catch (error: any) {
+        console.error('Error fetching patient by ID (queryFn):', error)
+        toast({
+          title: 'Error Fetching Patient',
+          description: error?.message || 'Failed to fetch patient. Please try again.',
+          variant: 'destructive',
+        })
+        throw error
+      }
+    },
+    enabled: !!patientId,
+    staleTime: 5 * 60 * 1000,
+  refetchOnWindowFocus: true,
+  })
+}
+
 // Hook for updating a patient using Supabase Edge Function
 export function useUpdatePatient() {
   const queryClient = useQueryClient()
