@@ -1,8 +1,54 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { useSupabaseQuery } from '@/hooks/useSupabase'
 import type { InsertPatient } from '@/shared/schema'
+
+// Types for the Edge Function response
+export interface Patient {
+  id: string
+  patient_id: string
+  name: string
+  email: string
+  age: number | null
+  phone: string
+  insurance: string
+  memberSince: string | null
+  status: 'Active' | 'Inactive'
+  isActive: boolean
+  gender: string
+  address: string
+  medicalHistory: any
+  initials: string
+}
+
+export interface PaginationInfo {
+  currentPage: number
+  totalPages: number
+  totalCount: number
+  limit: number
+  hasNextPage: boolean
+  hasPrevPage: boolean
+}
+
+export interface PatientsFilters {
+  search?: string
+  status?: 'active' | 'inactive' | 'all'
+}
+
+export interface PatientsParams extends PatientsFilters {
+  page?: number
+  limit?: number
+}
+
+export interface PatientsResponse {
+  success: boolean
+  data: {
+    patients: Patient[]
+    pagination: PaginationInfo
+    filters: PatientsFilters
+  }
+}
 
 // Hook for adding a patient using Supabase Edge Function
 export function useAddPatient() {
@@ -34,8 +80,7 @@ export function useAddPatient() {
     },
     onSuccess: (data) => {
       // Invalidate patients queries to refetch the list
-      queryClient.invalidateQueries({ queryKey: ['supabase', 'patients'] })
-      queryClient.invalidateQueries({ queryKey: ['/api/patients'] })
+      queryClient.invalidateQueries({ queryKey: ['patients'] })
       
       toast({
         title: "Patient Added Successfully",
@@ -55,12 +100,64 @@ export function useAddPatient() {
   })
 }
 
-// Hook for fetching patients using the existing useSupabaseQuery
-export function usePatients() {
-  // Use the existing useSupabaseQuery hook from useSupabase.ts
-  // This assumes you have a 'patients' table in your database
-  return useSupabaseQuery('patients', '*')
+// Hook for fetching patients using the get-patients Edge Function
+export function usePatients(params: PatientsParams = {}) {
+  const { toast } = useToast()
+
+  return useQuery({
+    queryKey: ['patients', params],
+    queryFn: async (): Promise<PatientsResponse> => {
+      try {
+        // Get the current session
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!session) {
+          throw new Error('No authenticated session found')
+        }
+
+        // Build URL with query parameters
+        const url = new URL(`${process.env.SUPABASE_URL}/functions/v1/get-patients`)
+
+        if (params.page) url.searchParams.set('page', params.page.toString())
+        if (params.limit) url.searchParams.set('limit', params.limit.toString())
+        if (params.search) url.searchParams.set('search', params.search)
+        if (params.status) url.searchParams.set('status', params.status)
+
+        // Use fetch directly for GET request
+        const response = await fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch patients')
+        }
+
+        return data
+      } catch (error: any) {
+        console.error('Error fetching patients:', error)
+        toast({
+          title: "Error Fetching Patients",
+          description: error.message || "Failed to fetch patients. Please try again.",
+          variant: "destructive",
+        })
+        throw error
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+  })
 }
+
 
 // Hook for fetching a single patient
 export function usePatient(patientId: string) {

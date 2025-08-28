@@ -1,31 +1,45 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Search, Plus, Filter } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AddPatientModal from "@/components/modals/add-patient-modal";
-import PatientModal from "@/components/modals/patient-modal";
-import type { Patient } from "@shared/schema";
+// import PatientModal from "@/components/modals/patient-modal";
+import { usePatients, type Patient } from "@/services/use-patient/use-patient";
 
 export default function Patients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
+  // const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  // const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('all');
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const { data: patients, isLoading } = useQuery<Patient[]>({
-    queryKey: ['/api/patients'],
+  // Debounce search term to avoid too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset to first page when searching
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const { data: patientsData, isLoading } = usePatients({
+    page: currentPage,
+    limit: 12,
+    search: debouncedSearch,
+    status: statusFilter
   });
 
-  const filteredPatients = patients?.filter((patient: Patient) =>
-    `${patient.firstName} ${patient.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const patients = patientsData?.data?.patients || [];
+  const pagination = patientsData?.data?.pagination;
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const handleStatusFilterChange = (newStatus: 'active' | 'inactive' | 'all') => {
+    setStatusFilter(newStatus);
+    setCurrentPage(1);
   };
 
   if (isLoading) {
@@ -62,72 +76,113 @@ export default function Patients() {
             className="pl-10"
           />
         </div>
-        <Button variant="outline">
-          <Filter className="h-4 w-4 mr-2" />
-          Filter
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant={statusFilter === 'all' ? 'default' : 'outline'}
+            onClick={() => handleStatusFilterChange('all')}
+          >
+            All
+          </Button>
+          <Button 
+            variant={statusFilter === 'active' ? 'default' : 'outline'}
+            onClick={() => handleStatusFilterChange('active')}
+          >
+            Active
+          </Button>
+          <Button 
+            variant={statusFilter === 'inactive' ? 'default' : 'outline'}
+            onClick={() => handleStatusFilterChange('inactive')}
+          >
+            Inactive
+          </Button>
+        </div>
       </div>
 
-      {filteredPatients?.length === 0 ? (
+      {patients?.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-gray-500">
-              {searchTerm ? 'No patients found matching your search.' : 'No patients registered yet.'}
+              {debouncedSearch ? 'No patients found matching your search.' : 'No patients registered yet.'}
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPatients?.map((patient: Patient) => (
-            <Card 
-              key={patient.id} 
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => {
-                setSelectedPatient(patient);
-                setIsPatientModalOpen(true);
-              }}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-medical-blue/10 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-medical-blue">
-                        {getInitials(patient.firstName, patient.lastName)}
-                      </span>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {patients?.map((patient: Patient) => (
+              <Card 
+                key={patient.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => {
+                  // TODO: Implement patient details modal
+                  console.log('Selected patient:', patient);
+                }}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-medical-blue/10 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-medical-blue">
+                          {patient.initials}
+                        </span>
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">{patient.name}</CardTitle>
+                        <p className="text-sm text-gray-600">{patient.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-lg">{patient.firstName} {patient.lastName}</CardTitle>
-                      <p className="text-sm text-gray-600">{patient.email}</p>
+                    <Badge variant={patient.isActive ? "default" : "secondary"}>
+                      {patient.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Age:</span>
+                      <span>{patient.age || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Phone:</span>
+                      <span>{patient.phone}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Insurance:</span>
+                      <span>{patient.insurance || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Member since:</span>
+                      <span>{patient.memberSince || 'N/A'}</span>
                     </div>
                   </div>
-                  <Badge variant={patient.isActive ? "default" : "secondary"}>
-                    {patient.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Age:</span>
-                    <span>{new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Phone:</span>
-                    <span>{patient.phone}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Insurance:</span>
-                    <span>{patient.insuranceProvider || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Member since:</span>
-                    <span>{new Date(patient.memberSince).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          {/* Pagination */}
+          {pagination && pagination.totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-8">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={!pagination.hasPrevPage}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-gray-600">
+                Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalCount} total)
+              </span>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={!pagination.hasNextPage}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modals */}
@@ -136,14 +191,15 @@ export default function Patients() {
         onClose={() => setIsAddModalOpen(false)}
       />
       
-      <PatientModal
+      {/* TODO: Fix PatientModal to work with new Patient interface */}
+      {/* <PatientModal
         patient={selectedPatient}
         isOpen={isPatientModalOpen}
         onClose={() => {
           setIsPatientModalOpen(false);
           setSelectedPatient(null);
         }}
-      />
+      /> */}
     </main>
   );
 }
