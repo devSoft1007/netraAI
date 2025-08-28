@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Calendar as CalendarIcon, Clock, User, Stethoscope } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, User, Stethoscope } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,9 +12,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertAppointmentSchema, type InsertAppointment, type Patient } from "@shared/schema";
-import { format } from "date-fns";
+
 import { useDoctors } from '@/services/doctor'
 import { usePatients } from '@/services/use-patient/use-patient'
+import { useProcedures } from '@/services/procedures'
 
 interface AddAppointmentModalProps {
   patients: Patient[];
@@ -55,6 +54,10 @@ export default function AddAppointmentModal({
   const { data: patientsResponse, isLoading: patientsLoading } = usePatients({ page: 1, limit: 100, status: 'all' })
   const fetchedPatients = patientsResponse?.data?.patients ?? []
   const patientOptions = fetchedPatients.length > 0 ? fetchedPatients : patients
+
+  // Fetch procedures for the procedure dropdown
+  const { data: proceduresResponse, isLoading: proceduresLoading } = useProcedures({ page: 1, limit: 100 })
+  const fetchedProcedures = proceduresResponse?.data?.procedures ?? []
 
   const addAppointmentMutation = useMutation({
     mutationFn: async (data: InsertAppointment) => {
@@ -253,14 +256,17 @@ export default function AddAppointmentModal({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Regular Checkup">Regular Checkup</SelectItem>
-                          <SelectItem value="Eye Exam">Eye Exam</SelectItem>
-                          <SelectItem value="Retinal Screening">Retinal Screening</SelectItem>
-                          <SelectItem value="Glaucoma Test">Glaucoma Test</SelectItem>
-                          <SelectItem value="Cataract Surgery">Cataract Surgery</SelectItem>
-                          <SelectItem value="LASIK Consultation">LASIK Consultation</SelectItem>
-                          <SelectItem value="Contact Lens Fitting">Contact Lens Fitting</SelectItem>
-                          <SelectItem value="Diabetic Eye Exam">Diabetic Eye Exam</SelectItem>
+                          {proceduresLoading ? (
+                            <SelectItem value="__loading-procedures" disabled>Loading procedures...</SelectItem>
+                          ) : fetchedProcedures.length === 0 ? (
+                            <SelectItem value="__no-procedures" disabled>No procedures available</SelectItem>
+                          ) : (
+                            fetchedProcedures.map((proc: any) => (
+                              <SelectItem key={proc.id} value={proc.procedureName ?? proc.id}>
+                                {proc.procedureName ?? proc.procedure_name ?? `Procedure ${proc.id}`}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
