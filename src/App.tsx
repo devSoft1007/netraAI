@@ -118,7 +118,7 @@ function AuthWrapper() {
 
   return (
     <div className="min-h-screen bg-clinical-white">
-      {showHeader && <Header />}
+  {showHeader && <Header />}
       <AppRouter />
     </div>
   );

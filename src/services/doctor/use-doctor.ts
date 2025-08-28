@@ -59,7 +59,7 @@ export function useDoctors(params: DoctorsParams = {}) {
 					throw new Error('No authenticated session found')
 				}
 
-				const url = new URL(`${process.env.SUPABASE_URL}/functions/v1/get-doctors`)
+				const url = new URL(`${process.env.SUPABASE_URL}/functions/v1/get-doctors-by-clinic-id`)
 
 				if (params.includeInactive) url.searchParams.set('include_inactive', 'true')
 				if (params.specialization) url.searchParams.set('specialization', params.specialization)

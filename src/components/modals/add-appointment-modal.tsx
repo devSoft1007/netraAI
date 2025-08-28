@@ -15,6 +15,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertAppointmentSchema, type InsertAppointment, type Patient } from "@shared/schema";
 import { format } from "date-fns";
+import { useDoctors } from '@/services/doctor'
+import { usePatients } from '@/services/use-patient/use-patient'
 
 interface AddAppointmentModalProps {
   patients: Patient[];
@@ -44,6 +46,15 @@ export default function AddAppointmentModal({
       notes: "",
     },
   });
+
+  // Fetch doctors for the dropdown
+  const { data: doctorsResponse, isLoading: doctorsLoading } = useDoctors()
+  const doctors = doctorsResponse?.data?.doctors ?? []
+
+  // Also fetch patients here so the modal shows the latest list (fallback to prop)
+  const { data: patientsResponse, isLoading: patientsLoading } = usePatients({ page: 1, limit: 100, status: 'all' })
+  const fetchedPatients = patientsResponse?.data?.patients ?? []
+  const patientOptions = fetchedPatients.length > 0 ? fetchedPatients : patients
 
   const addAppointmentMutation = useMutation({
     mutationFn: async (data: InsertAppointment) => {
@@ -110,11 +121,19 @@ export default function AddAppointmentModal({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {patients?.map((patient) => (
-                            <SelectItem key={patient.id} value={patient.id}>
-                              {patient.firstName} {patient.lastName} - {patient.email}
-                            </SelectItem>
-                          ))}
+                          {patientsLoading ? (
+                            <SelectItem value="__loading-patients" disabled>Loading patients...</SelectItem>
+                          ) : (patientOptions?.length ?? 0) === 0 ? (
+                            <SelectItem value="__no-patients" disabled>No patients available</SelectItem>
+                          ) : (
+                            patientOptions.map((patient: any) => (
+                              <SelectItem key={patient.id} value={patient.id}>
+                                {patient.firstName && patient.lastName
+                                  ? `${patient.firstName} ${patient.lastName} - ${patient.email ?? ''}`
+                                  : `${patient.name ?? `${patient.email ?? 'Unknown'}`} ${patient.email ? `- ${patient.email}` : ''}`}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -176,11 +195,17 @@ export default function AddAppointmentModal({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Dr. Sarah Chen">Dr. Sarah Chen</SelectItem>
-                            <SelectItem value="Dr. Michael Rodriguez">Dr. Michael Rodriguez</SelectItem>
-                            <SelectItem value="Dr. Emily Johnson">Dr. Emily Johnson</SelectItem>
-                            <SelectItem value="Dr. David Kim">Dr. David Kim</SelectItem>
-                            <SelectItem value="Dr. Lisa Wang">Dr. Lisa Wang</SelectItem>
+                            {doctorsLoading ? (
+                              <SelectItem value="" disabled>Loading doctors...</SelectItem>
+                            ) : doctors.length === 0 ? (
+                              <SelectItem value="" disabled>No doctors available</SelectItem>
+                            ) : (
+                              doctors.map((doctor) => (
+                                <SelectItem key={doctor.id} value={doctor.displayName ?? doctor.name}>
+                                  {doctor.displayName ?? doctor.name}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
