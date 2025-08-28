@@ -163,3 +163,74 @@ export function usePatients(params: PatientsParams = {}) {
 export function usePatient(patientId: string) {
   return useSupabaseQuery('patients', '*', { id: patientId })
 }
+
+// Hook for updating a patient using Supabase Edge Function
+export function useUpdatePatient() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (patientData: Partial<Patient> & { id?: string }) => {
+      // Ensure we have a valid session
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        throw new Error('No authenticated session found')
+      }
+
+      // Map `id` to `patientId` which the edge function expects
+      const payload: any = { ...patientData }
+      if (payload.id && !('patientId' in payload)) {
+        payload.patientId = payload.id
+        delete payload.id
+      }
+
+      // Call the Edge Function via direct fetch to support PATCH
+      const url = `${process.env.SUPABASE_URL}/functions/v1/update-patient`
+
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        let parsed: any = {}
+        try { parsed = JSON.parse(text) } catch { parsed = { message: text } }
+        throw new Error(parsed?.error || parsed?.message || `HTTP error ${res.status}`)
+      }
+
+      const data = await res.json()
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to update patient')
+      }
+
+      return data
+    },
+    onSuccess: (data) => {
+      // Refresh patients list and any individual patient cache
+      queryClient.invalidateQueries({ queryKey: ['patients'] })
+      if (data?.patient?.id) {
+        queryClient.invalidateQueries({ queryKey: ['patients', { id: data.patient.id }] })
+      }
+
+      toast({
+        title: 'Patient Updated',
+        description: data?.message || 'Patient information has been updated.',
+      })
+
+      return data
+    },
+    onError: (error: any) => {
+      console.error('Error updating patient:', error)
+      toast({
+        title: 'Error Updating Patient',
+        description: error?.message || 'Failed to update patient. Please try again.',
+        variant: 'destructive',
+      })
+    },
+  })
+}

@@ -5,14 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AddPatientModal from "@/components/modals/add-patient-modal";
-// import PatientModal from "@/components/modals/patient-modal";
-import { usePatients, type Patient } from "@/services/use-patient/use-patient";
+import PatientModal from "@/components/modals/patient-modal";
+import { usePatients, usePatient } from "@/services/use-patient/use-patient";
+import type { Patient as FullPatient } from "@shared/schema";
+import { transformDatesFromAPI } from "@shared/schema";
 
 export default function Patients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  // const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  // const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<FullPatient | null>(null);
+  const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('all');
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -36,6 +38,26 @@ export default function Patients() {
 
   const patients = patientsData?.data?.patients || [];
   const pagination = patientsData?.data?.pagination;
+
+  // Fetch a single, full patient record when needed using the usePatient hook
+  const { data: fullPatientData } = usePatient(selectedPatient?.id || "");
+
+  const modalPatient: FullPatient | null = (() => {
+    if (!selectedPatient) return null;
+    if (!fullPatientData) return selectedPatient;
+
+    const fetched: any = fullPatientData;
+
+    if (Array.isArray(fetched) && fetched.length > 0 && fetched[0]?.id) {
+      return transformDatesFromAPI(fetched[0]) as FullPatient;
+    }
+
+    if (fetched && typeof fetched === 'object' && fetched.id) {
+      return transformDatesFromAPI(fetched) as FullPatient;
+    }
+
+    return transformDatesFromAPI(selectedPatient) as FullPatient;
+  })();
 
   const handleStatusFilterChange = (newStatus: 'active' | 'inactive' | 'all') => {
     setStatusFilter(newStatus);
@@ -109,13 +131,36 @@ export default function Patients() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {patients?.map((patient: Patient) => (
-              <Card 
-                key={patient.id} 
+            {patients?.map((patient) => (
+              <Card
+                key={patient.id}
                 className="hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => {
-                  // TODO: Implement patient details modal
-                  console.log('Selected patient:', patient);
+                  // When a card is clicked, set a lightweight selected patient and open the modal.
+                  // The modal uses queries to fetch full patient details by id.
+                  setSelectedPatient({
+                    id: patient.id,
+                    firstName: patient.name.split(' ')[0] || '',
+                    lastName: patient.name.split(' ').slice(1).join(' ') || '',
+                    email: patient.email || '',
+                    phone: patient.phone || '',
+                    dateOfBirth: new Date(), // fallback, modal will refetch full data
+                    gender: patient.gender || 'Unknown',
+                    address: patient.address || '',
+                    insuranceProvider: patient.insurance || undefined,
+                    insurancePolicyNumber: undefined,
+                    insuranceGroupNumber: undefined,
+                    emergencyContactName: undefined,
+                    emergencyContactPhone: undefined,
+                    medicalHistory: undefined,
+                    allergies: [],
+                    currentMedications: [],
+                    memberSince: new Date(patient.memberSince || new Date().toISOString()),
+                    isActive: patient.isActive,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                  } as FullPatient);
+                  setIsPatientModalOpen(true);
                 }}
               >
                 <CardHeader className="pb-3">
@@ -191,15 +236,14 @@ export default function Patients() {
         onClose={() => setIsAddModalOpen(false)}
       />
       
-      {/* TODO: Fix PatientModal to work with new Patient interface */}
-      {/* <PatientModal
-        patient={selectedPatient}
+      <PatientModal
+        patient={modalPatient}
         isOpen={isPatientModalOpen}
         onClose={() => {
           setIsPatientModalOpen(false);
           setSelectedPatient(null);
         }}
-      /> */}
+      />
     </main>
   );
 }
