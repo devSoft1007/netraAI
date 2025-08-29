@@ -25,7 +25,6 @@ const localizer = dateFnsLocalizer({
 
 interface AppointmentCalendarProps {
   appointments: Appointment[];
-  patients: Patient[];
   onEditAppointment?: (appointment: Appointment) => void;
   onDeleteAppointment?: (appointmentId: string) => void;
   onSelectSlot?: (slotInfo: { start: Date; end: Date }) => void;
@@ -41,7 +40,6 @@ interface CalendarEvent {
 
 export default function AppointmentCalendar({
   appointments,
-  patients,
   onEditAppointment,
   onDeleteAppointment,
   onSelectSlot,
@@ -49,9 +47,9 @@ export default function AppointmentCalendar({
   const [currentView, setCurrentView] = useState<View>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const getPatientName = (patientId: string) => {
-    const patient = patients?.find((p) => p.id === patientId);
-    return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown Patient";
+  // Use patient name from the appointment data
+  const getPatientName = (appointment: Appointment) => {
+    return appointment.patientName || "Unknown Patient";
   };
 
   const getStatusColor = (status: string) => {
@@ -81,18 +79,23 @@ export default function AppointmentCalendar({
       const [hours, minutes] = appointment.appointmentTime.split(":").map(Number);
       appointmentDateTime.setHours(hours, minutes, 0, 0);
       
+      // Calculate end time based on duration if available, otherwise default to 1 hour
       const endTime = new Date(appointmentDateTime);
-      endTime.setHours(endTime.getHours() + 1); // Default 1-hour duration
+      if (appointment.duration) {
+        endTime.setMinutes(endTime.getMinutes() + appointment.duration);
+      } else {
+        endTime.setHours(endTime.getHours() + 1);
+      }
 
       return {
         id: appointment.id,
-        title: `${getPatientName(appointment.patientId)} - ${appointment.procedure}`,
+        title: `${getPatientName(appointment)} - ${appointment.procedure}`,
         start: appointmentDateTime,
         end: endTime,
         resource: appointment,
       };
     });
-  }, [appointments, patients]);
+  }, [appointments]);
 
   const eventStyleGetter = (event: CalendarEvent) => {
     const status = event.resource.status;
@@ -151,7 +154,7 @@ export default function AppointmentCalendar({
       <div className="space-y-2 text-sm">
         <div className="flex items-center space-x-2">
           <User className="h-4 w-4 text-gray-500" />
-          <span>{getPatientName(appointment.patientId)}</span>
+          <span>{appointment.patientName}</span>
         </div>
         
         <div className="flex items-center space-x-2">
@@ -208,7 +211,7 @@ export default function AppointmentCalendar({
     >
       <div className="h-full w-full cursor-pointer">
         <div className="text-xs font-medium truncate">
-          {getPatientName(event.resource.patientId)}
+          {getPatientName(event.resource)}
         </div>
         <div className="text-xs opacity-90 truncate">
           {event.resource.procedure}

@@ -1,3 +1,3 @@
 
-export { useAddAppointment } from './use-appointment'
+export { useAddAppointment, useAppointmentQuery } from './use-appointment'
 

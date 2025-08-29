@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { Calendar, Plus, Filter, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
 import AppointmentCalendar from "@/components/calendar/appointment-calendar";
 import EditAppointmentModal from "@/components/modals/edit-appointment-modal";
 import AddAppointmentModal from "@/components/modals/add-appointment-modal";
+import { useAppointmentQuery } from "@/services/appointments";
 import type { Appointment, Patient } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -20,8 +21,15 @@ export default function Appointments() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: appointments, isLoading } = useQuery<Appointment[]>({
-    queryKey: ['/api/appointments'],
+  // Calculate date range for fetching appointments (default to current month)
+  const currentDate = new Date();
+  const startDate = startOfMonth(currentDate).toISOString();
+  const endDate = endOfMonth(currentDate).toISOString();
+
+  // Fetch appointments using the new hook
+  const { data: appointments = [], isLoading, error } = useAppointmentQuery({
+    start: startDate,
+    end: endDate
   });
 
   const { data: patients } = useQuery<Patient[]>({
@@ -76,6 +84,14 @@ export default function Appointments() {
     );
   }
 
+  if (error) {
+    return (
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center text-red-500">Error loading appointments: {error.message}</div>
+      </main>
+    );
+  }
+
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
@@ -93,7 +109,7 @@ export default function Appointments() {
       </div>
 
       <AppointmentCalendar
-        appointments={appointments || []}
+        appointments={appointments}
         patients={patients || []}
         onEditAppointment={handleEditAppointment}
         onDeleteAppointment={handleDeleteAppointment}

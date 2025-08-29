@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X, Calendar as CalendarIcon, Clock, User, Stethoscope } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -44,6 +44,21 @@ export default function EditAppointmentModal({
       notes: appointment?.notes || "",
     },
   });
+
+  // Ensure form values update when the appointment prop changes
+  useEffect(() => {
+    if (appointment) {
+      form.reset({
+        patientId: appointment?.patientId || "",
+        doctorName: appointment?.doctorName || "",
+        appointmentDate: appointment.appointmentDate ? new Date(appointment.appointmentDate) : new Date(),
+        appointmentTime: appointment?.appointmentTime || "",
+        procedure: appointment?.procedure || "",
+        status: appointment?.status || "scheduled",
+        notes: appointment?.notes || "",
+      });
+    }
+  }, [appointment, form]);
 
   const updateAppointmentMutation = useMutation({
     mutationFn: async (data: InsertAppointment) => {

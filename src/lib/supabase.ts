@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Supabase configuration - Updated for Vite environment variables
-const supabaseUrl = process.env.SUPABASE_URL || ''
-const supabaseAnonKey =  process.env.SUPABASE_ANON_KEY || ''
+export const supabaseUrl = process.env.SUPABASE_URL || ''
+export const supabaseAnonKey =  process.env.SUPABASE_ANON_KEY || ''
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase URL and Anon Key are required. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.')

@@ -1,7 +1,8 @@
 
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase, supabaseUrl } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
+import type { Appointment } from '@/shared/schema'
 
 // Types describing the appointment payload expected by the edge function
 export interface ProcedureInput {
@@ -82,4 +83,74 @@ export function useAddAppointment() {
 			})
 		},
 	})
+}
+
+// Define the parameters for the get-appointments function
+export interface GetAppointmentsParams {
+  start: string // ISO-8601 date or date-time
+  end: string   // ISO-8601 date or date-time
+  view?: 'month' | 'week' | 'day' // Optional - for future use
+  status?: string[] // Optional - comma-separated list of statuses
+  limit?: number    // Optional - pagination limit (10-500)
+}
+
+// Define the response structure from the edge function
+export interface GetAppointmentsResponse {
+  success: boolean
+  data: Appointment[]
+}
+
+// Hook for fetching appointments using the Supabase Edge Function
+export function useAppointmentQuery(params: GetAppointmentsParams) {
+  return useQuery({
+    queryKey: ['appointments', params],
+    queryFn: async () => {
+      // Get current session to include auth token
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        throw new Error('No authenticated session found')
+      }
+
+      // Construct query parameters
+      const searchParams = new URLSearchParams({
+        start: params.start,
+        end: params.end,
+        ...(params.view && { view: params.view }),
+        ...(params.limit && { limit: params.limit.toString() }),
+        ...(params.status && params.status.length > 0 && { 
+          status: params.status.join(',') 
+        }),
+      })
+
+      // Call the Supabase Edge Function
+      // Using fetch directly to have more control over query parameters
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/get-appointments?${searchParams.toString()}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch appointments')
+      }
+
+      return result.data as Appointment[]
+    },
+    // Only enable the query if we have required parameters
+    enabled: !!params.start && !!params.end,
+    // Cache appointments for 5 minutes by default
+    staleTime: 1000 * 60 * 5,
+  })
 }

@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Calendar as CalendarIcon, Clock, User, Stethoscope, Activity } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, User, Stethoscope, Activity } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,22 +11,29 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertProcedureSchema, type InsertProcedure, type Patient } from "@shared/schema";
-import { format } from "date-fns";
+import { insertProcedureSchema, type InsertProcedure } from "@shared/schema";
+import { usePatients } from "@/services/use-patient";
+import { useProcedures } from "@/services/procedures/use-procedure";
+import { useEffect } from "react";
 
 interface AddProcedureModalProps {
-  patients: Patient[];
   isOpen: boolean;
   onClose: () => void;
 }
 
 export default function AddProcedureModal({
-  patients,
   isOpen,
   onClose,
 }: AddProcedureModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Fetch patients and procedures
+  const { data: patientsData, isLoading: isLoadingPatients } = usePatients();
+  const { data: proceduresData, isLoading: isLoadingProcedures } = useProcedures();
+  
+  const patients = patientsData?.data?.patients || [];
+  const procedures = proceduresData?.data?.procedures || [];
 
   const form = useForm<InsertProcedure>({
     resolver: zodResolver(insertProcedureSchema),
@@ -102,16 +107,16 @@ export default function AddProcedureModal({
                         <User className="h-4 w-4" />
                         <span>Patient *</span>
                       </FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingPatients}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select patient" />
+                            <SelectValue placeholder={isLoadingPatients ? "Loading patients..." : "Select patient"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {patients?.map((patient) => (
                             <SelectItem key={patient.id} value={patient.id}>
-                              {patient.firstName} {patient.lastName} - {patient.email}
+                              {patient.name} - {patient.email}
                             </SelectItem>
                           ))}
                         </SelectContent>
