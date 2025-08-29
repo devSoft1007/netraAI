@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+// react-query is not required directly in this modal now
 import { Calendar as CalendarIcon, Clock, User, Stethoscope } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+// zodResolver removed because modal uses a local form type to match payload
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { insertAppointmentSchema, type InsertAppointment, type Patient } from "@shared/schema";
+import { useAddAppointment } from '@/services/appointments'
+import { /* insertAppointmentSchema, */ type Patient } from "@shared/schema";
 
 import { useDoctors } from '@/services/doctor'
 import { usePatients } from '@/services/use-patient/use-patient'
@@ -30,14 +29,21 @@ export default function AddAppointmentModal({
   onClose,
   selectedDate,
 }: AddAppointmentModalProps) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  // local form shape for this modal (we need doctorId & procedure id)
+  interface ModalFormValues {
+    patientId: string
+    doctorId: string
+    appointmentDate: string | Date
+    appointmentTime: string
+    procedure: string
+    status: 'scheduled' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'urgent'
+    notes?: string | null
+  }
 
-  const form = useForm<InsertAppointment>({
-    resolver: zodResolver(insertAppointmentSchema),
+  const form = useForm<ModalFormValues>({
     defaultValues: {
       patientId: "",
-      doctorName: "",
+      doctorId: "",
       appointmentDate: selectedDate || new Date(),
       appointmentTime: "",
       procedure: "",
@@ -59,30 +65,45 @@ export default function AddAppointmentModal({
   const { data: proceduresResponse, isLoading: proceduresLoading } = useProcedures({ page: 1, limit: 100 })
   const fetchedProcedures = proceduresResponse?.data?.procedures ?? []
 
-  const addAppointmentMutation = useMutation({
-    mutationFn: async (data: InsertAppointment) => {
-      const response = await apiRequest('POST', '/api/appointments', data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
-      toast({
-        title: "Appointment Created",
-        description: "The appointment has been scheduled successfully.",
-      });
-      handleClose();
-    },
-    onError: () => {
-      toast({
-        title: "Creation Failed",
-        description: "Failed to create the appointment. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  // use the centralized appointment hook which calls the Supabase Edge Function
+  const addAppointmentMutation = useAddAppointment()
 
-  const onSubmit = (data: InsertAppointment) => {
-    addAppointmentMutation.mutate(data);
+  const onSubmit = (data: ModalFormValues) => {
+    // Transform form data into the payload expected by the edge function
+    // Find selected doctor (we store id in the select) and selected procedure
+    const selectedDoctorId = data.doctorId
+    const selectedProcedureValue = data.procedure
+
+    const foundProcedure = fetchedProcedures.find((p: any) => p.id === selectedProcedureValue || p.procedureName === selectedProcedureValue || (p as any).procedure_name === selectedProcedureValue)
+    const procedureName = (foundProcedure as any)?.procedureName ?? (foundProcedure as any)?.procedure_name ?? String(selectedProcedureValue)
+
+    const appointmentDateIso = data.appointmentDate instanceof Date ? data.appointmentDate.toISOString() : String(data.appointmentDate)
+
+    const payload = {
+      patient: { id: data.patientId },
+      doctor: { id: selectedDoctorId },
+      appointmentDate: appointmentDateIso,
+      appointmentTime: data.appointmentTime,
+      duration: 30,
+      appointmentType: 'consultation',
+      reason: null,
+      notes: data.notes || null,
+      status: data.status,
+      procedures: [
+        {
+          id: selectedProcedureValue,
+          procedureName: procedureName,
+          performedDate: appointmentDateIso,
+          status: 'planned',
+        },
+      ],
+    }
+
+    addAppointmentMutation.mutate(payload, {
+      onSuccess: () => {
+        handleClose()
+      },
+    })
   };
 
   const handleClose = () => {
@@ -187,7 +208,7 @@ export default function AddAppointmentModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="doctorName"
+                    name="doctorId"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Doctor *</FormLabel>
@@ -204,7 +225,7 @@ export default function AddAppointmentModal({
                               <SelectItem value="" disabled>No doctors available</SelectItem>
                             ) : (
                               doctors.map((doctor) => (
-                                <SelectItem key={doctor.id} value={doctor.displayName ?? doctor.name}>
+                                <SelectItem key={doctor.id} value={doctor.id}>
                                   {doctor.displayName ?? doctor.name}
                                 </SelectItem>
                               ))
@@ -262,7 +283,7 @@ export default function AddAppointmentModal({
                             <SelectItem value="__no-procedures" disabled>No procedures available</SelectItem>
                           ) : (
                             fetchedProcedures.map((proc: any) => (
-                              <SelectItem key={proc.id} value={proc.procedureName ?? proc.id}>
+                              <SelectItem key={proc.id} value={proc.id}>
                                 {proc.procedureName ?? proc.procedure_name ?? `Procedure ${proc.id}`}
                               </SelectItem>
                             ))
