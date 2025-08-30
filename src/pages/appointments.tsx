@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { Calendar, Plus, Filter, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import AppointmentCalendar from "@/components/calendar/appointment-calendar";
 import EditAppointmentModal from "@/components/modals/edit-appointment-modal";
 import AddAppointmentModal from "@/components/modals/add-appointment-modal";
 import { useAppointmentQuery } from "@/services/appointments";
+import { usePatients } from "@/services/use-patient/use-patient";
 import type { Appointment, Patient } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -32,9 +33,9 @@ export default function Appointments() {
     end: endDate
   });
 
-  const { data: patients } = useQuery<Patient[]>({
-    queryKey: ['/api/patients'],
-  });
+  // Use the dedicated patients hook which calls the Edge Function and returns a wrapped response
+  const { data: patientsResponse } = usePatients({ page: 1, limit: 200 });
+  const patients = (patientsResponse as any)?.data?.patients ?? (patientsResponse as any)?.patients ?? [];
 
   const deleteAppointmentMutation = useMutation({
     mutationFn: async (appointmentId: string) => {
@@ -110,21 +111,20 @@ export default function Appointments() {
 
       <AppointmentCalendar
         appointments={appointments}
-        patients={patients || []}
         onEditAppointment={handleEditAppointment}
         onDeleteAppointment={handleDeleteAppointment}
         onSelectSlot={handleSelectSlot}
       />
 
       <AddAppointmentModal
-        patients={patients || []}
+  patients={patients || []}
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
       />
 
       <EditAppointmentModal
         appointment={selectedAppointment}
-        patients={patients || []}
+  patients={patients || []}
         isOpen={isEditModalOpen}
         onClose={() => {
           setIsEditModalOpen(false);

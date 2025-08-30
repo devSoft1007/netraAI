@@ -4,17 +4,17 @@ import { X, Calendar as CalendarIcon, Clock, User, Stethoscope } from "lucide-re
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+// zod resolver not used for edit modal form
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertAppointmentSchema, type Appointment, type InsertAppointment, type Patient } from "@shared/schema";
-import { format } from "date-fns";
+import type { Appointment, Patient } from "@shared/schema";
+import { useDoctors } from '@/services/doctor'
+import { useProcedures } from '@/services/procedures'
 
 interface EditAppointmentModalProps {
   appointment: Appointment | null;
@@ -32,36 +32,116 @@ export default function EditAppointmentModal({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const form = useForm<InsertAppointment>({
-    resolver: zodResolver(insertAppointmentSchema),
+  // Local form shape for editing (store doctor by id for stability)
+  interface FormValues {
+    patientId: string;
+    doctorId: string;
+    appointmentDate: string | Date;
+    appointmentTime: string;
+    procedure: string;
+    status: string;
+    notes?: string | null;
+  }
+
+  const form = useForm<FormValues>({
     defaultValues: {
-      patientId: appointment?.patientId || "",
-      doctorName: appointment?.doctorName || "",
-      appointmentDate: appointment ? new Date(appointment.appointmentDate) : new Date(),
-      appointmentTime: appointment?.appointmentTime || "",
-      procedure: appointment?.procedure || "",
-      status: appointment?.status || "scheduled",
-      notes: appointment?.notes || "",
+      patientId: "",
+      doctorId: "",
+      appointmentDate: new Date(),
+      appointmentTime: "",
+      procedure: "",
+      status: "scheduled",
+      notes: "",
     },
   });
+  // Normalize patients prop: some endpoints return an array, others return { success, data: { patients: [] } }
+  const patientOptions = Array.isArray(patients)
+    ? patients
+    : (patients as any)?.data?.patients ?? (patients as any)?.patients ?? [];
+  // Normalize patient objects to a predictable shape
+  const normalizedPatients = (patientOptions as any[]).map((p) => ({
+    id: String(p.id ?? p.patient_id ?? p.patientId ?? ""),
+    firstName: p.firstName ?? p.first_name ?? p.name ?? "",
+    lastName: p.lastName ?? p.last_name ?? "",
+    email: p.email ?? "",
+  }));
+
+  // Fetch doctors for the dropdown
+  const { data: doctorsResponse } = useDoctors();
+  const doctors = (doctorsResponse as any)?.data?.doctors ?? [];
+  const normalizedDoctors = (doctors as any[]).map((d) => ({
+    id: String(d.id ?? d.doctorId ?? d.userId ?? ""),
+    label: d.displayName ?? d.name ?? d.fullName ?? d.id ?? "",
+  }));
+
+  // Fetch procedures for the dropdown
+  const { data: proceduresResponse } = useProcedures({ page: 1, limit: 200 });
+  const procedures = (proceduresResponse as any)?.data?.procedures ?? [];
+  const normalizedProcedures = (procedures as any[]).map((p) => ({
+    id: String(p.id ?? p.procedureId ?? p._id ?? ""),
+    name: p.procedureName ?? p.procedure_name ?? String(p.id ?? p.procedureId ?? ""),
+  }));
 
   // Ensure form values update when the appointment prop changes
   useEffect(() => {
     if (appointment) {
+      // Derive patientId from multiple possible shapes (flat or nested)
+      const patientId =
+        (appointment as any).patientId ||
+        (appointment as any).patient?.id ||
+        (appointment as any).patient?.patientId ||
+        (appointment as any).patient?.userId ||
+        "";
+
+      // Derive doctor id from multiple possible shapes
+      let doctorIdRaw =
+        (appointment as any).doctorId ||
+        (appointment as any).doctor?.id ||
+        (appointment as any).doctor?.userId ||
+        (appointment as any).doctor?.doctorId ||
+        "";
+
+      // If appointment stored doctor by name/label, try to resolve to id
+      if (!doctorIdRaw) {
+        const doctorLabelRaw = (appointment as any).doctorName || (appointment as any).doctor?.displayName || (appointment as any).doctor?.name || "";
+        const matched = normalizedDoctors.find((d) => d.label === doctorLabelRaw || d.id === String(doctorLabelRaw));
+        doctorIdRaw = matched ? matched.id : "";
+      }
+
+      // Derive procedure: try to resolve to a procedure id from normalizedProcedures
+      let procedureRaw = (appointment as any).procedure || "";
+      if (!procedureRaw && Array.isArray((appointment as any).procedures) && (appointment as any).procedures.length > 0) {
+        const p = (appointment as any).procedures[0];
+        procedureRaw = p?.procedureName || p?.procedure_name || p?.id || "";
+      }
+
+      let procedureId = "";
+      if (procedureRaw) {
+        const matchedProc = normalizedProcedures.find(
+          (pr) => pr.id === String(procedureRaw) || pr.name === procedureRaw
+        );
+        procedureId = matchedProc ? matchedProc.id : String(procedureRaw);
+      }
+
+      const appointmentDate = (appointment as any).appointmentDate ? new Date((appointment as any).appointmentDate) : new Date();
+      const appointmentTime = (appointment as any).appointmentTime || "";
+      const status = (appointment as any).status || "scheduled";
+      const notes = (appointment as any).notes || "";
+
       form.reset({
-        patientId: appointment?.patientId || "",
-        doctorName: appointment?.doctorName || "",
-        appointmentDate: appointment.appointmentDate ? new Date(appointment.appointmentDate) : new Date(),
-        appointmentTime: appointment?.appointmentTime || "",
-        procedure: appointment?.procedure || "",
-        status: appointment?.status || "scheduled",
-        notes: appointment?.notes || "",
+        patientId,
+        doctorId: doctorIdRaw,
+        appointmentDate,
+        appointmentTime,
+  procedure: procedureId,
+        status,
+        notes,
       });
     }
-  }, [appointment, form]);
+  }, [appointment, form, normalizedDoctors, normalizedProcedures]);
 
   const updateAppointmentMutation = useMutation({
-    mutationFn: async (data: InsertAppointment) => {
+  mutationFn: async (data: any) => {
       const response = await apiRequest('PATCH', `/api/appointments/${appointment?.id}`, data);
       return response.json();
     },
@@ -82,8 +162,33 @@ export default function EditAppointmentModal({
     },
   });
 
-  const onSubmit = (data: InsertAppointment) => {
-    updateAppointmentMutation.mutate(data);
+  const onSubmit = (data: FormValues) => {
+    // Transform into the payload shape expected by the API
+    const appointmentDateIso = data.appointmentDate instanceof Date ? data.appointmentDate.toISOString() : String(data.appointmentDate);
+
+  const procName = normalizedProcedures.find(p => p.id === data.procedure)?.name ?? data.procedure;
+
+  const payload: any = {
+      patient: { id: data.patientId },
+      doctor: { id: data.doctorId },
+      appointmentDate: appointmentDateIso,
+      appointmentTime: data.appointmentTime,
+      duration: 30,
+      appointmentType: 'consultation',
+      reason: null,
+      notes: data.notes || null,
+      status: data.status,
+      procedures: [
+        {
+          id: data.procedure,
+          procedureName: procName,
+          performedDate: appointmentDateIso,
+          status: 'planned',
+        },
+      ],
+    };
+
+    updateAppointmentMutation.mutate(payload);
   };
 
   const handleClose = () => {
@@ -93,10 +198,8 @@ export default function EditAppointmentModal({
 
   if (!appointment) return null;
 
-  const getPatientName = (patientId: string) => {
-    const patient = patients?.find((p) => p.id === patientId);
-    return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown Patient";
-  };
+  // ...existing code...
+
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -125,16 +228,16 @@ export default function EditAppointmentModal({
                         <User className="h-4 w-4" />
                         <span>Patient *</span>
                       </FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select value={field.value as string} onValueChange={field.onChange}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select patient" />
-                          </SelectTrigger>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select patient" />
+                            </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {patients?.map((patient) => (
+                          {normalizedPatients.map((patient) => (
                             <SelectItem key={patient.id} value={patient.id}>
-                              {patient.firstName} {patient.lastName} - {patient.email}
+                              {`${patient.firstName}${patient.lastName ? ` ${patient.lastName}` : ''}${patient.email ? ` - ${patient.email}` : ''}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -187,22 +290,26 @@ export default function EditAppointmentModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="doctorName"
+                    name="doctorId"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Doctor *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select value={field.value as string} onValueChange={field.onChange}>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select doctor" />
-                            </SelectTrigger>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select doctor" />
+                              </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Dr. Sarah Chen">Dr. Sarah Chen</SelectItem>
-                            <SelectItem value="Dr. Michael Rodriguez">Dr. Michael Rodriguez</SelectItem>
-                            <SelectItem value="Dr. Emily Johnson">Dr. Emily Johnson</SelectItem>
-                            <SelectItem value="Dr. David Kim">Dr. David Kim</SelectItem>
-                            <SelectItem value="Dr. Lisa Wang">Dr. Lisa Wang</SelectItem>
+                            {normalizedDoctors.length === 0 ? (
+                              <SelectItem value="">No doctors available</SelectItem>
+                            ) : (
+                              normalizedDoctors.map((doc) => (
+                                  <SelectItem key={doc.id} value={doc.id}>
+                                    {doc.label}
+                                  </SelectItem>
+                                ))
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -216,7 +323,7 @@ export default function EditAppointmentModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Status *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select value={field.value as string} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select status" />
@@ -243,21 +350,22 @@ export default function EditAppointmentModal({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Procedure *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select value={field.value as string} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select procedure" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Regular Checkup">Regular Checkup</SelectItem>
-                          <SelectItem value="Eye Exam">Eye Exam</SelectItem>
-                          <SelectItem value="Retinal Screening">Retinal Screening</SelectItem>
-                          <SelectItem value="Glaucoma Test">Glaucoma Test</SelectItem>
-                          <SelectItem value="Cataract Surgery">Cataract Surgery</SelectItem>
-                          <SelectItem value="LASIK Consultation">LASIK Consultation</SelectItem>
-                          <SelectItem value="Contact Lens Fitting">Contact Lens Fitting</SelectItem>
-                          <SelectItem value="Diabetic Eye Exam">Diabetic Eye Exam</SelectItem>
+                          {normalizedProcedures.length === 0 ? (
+                            <SelectItem value="">No procedures available</SelectItem>
+                          ) : (
+                            normalizedProcedures.map((proc) => (
+                              <SelectItem key={proc.id} value={proc.id}>
+                                {proc.name}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />

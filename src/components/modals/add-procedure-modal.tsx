@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { insertProcedureSchema, type InsertProcedure } from "@shared/schema";
 import { usePatients } from "@/services/use-patient";
 import { useProcedures } from "@/services/procedures/use-procedure";
-import { useEffect } from "react";
+import { useDoctors } from "@/services/doctor";
 
 interface AddProcedureModalProps {
   isOpen: boolean;
@@ -28,12 +28,14 @@ export default function AddProcedureModal({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Fetch patients and procedures
+  // Fetch patients, procedures, and doctors
   const { data: patientsData, isLoading: isLoadingPatients } = usePatients();
   const { data: proceduresData, isLoading: isLoadingProcedures } = useProcedures();
+  const { data: doctorsData, isLoading: isLoadingDoctors } = useDoctors();
   
   const patients = patientsData?.data?.patients || [];
   const procedures = proceduresData?.data?.procedures || [];
+  const doctors = doctorsData?.data?.doctors || [];
 
   const form = useForm<InsertProcedure>({
     resolver: zodResolver(insertProcedureSchema),
@@ -132,23 +134,18 @@ export default function AddProcedureModal({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Procedure Type *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingProcedures}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select procedure type" />
+                            <SelectValue placeholder={isLoadingProcedures ? "Loading procedures..." : "Select procedure type"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Cataract Surgery">Cataract Surgery</SelectItem>
-                          <SelectItem value="LASIK Surgery">LASIK Surgery</SelectItem>
-                          <SelectItem value="Retinal Detachment Repair">Retinal Detachment Repair</SelectItem>
-                          <SelectItem value="Glaucoma Surgery">Glaucoma Surgery</SelectItem>
-                          <SelectItem value="Corneal Transplant">Corneal Transplant</SelectItem>
-                          <SelectItem value="Vitrectomy">Vitrectomy</SelectItem>
-                          <SelectItem value="Macular Degeneration Treatment">Macular Degeneration Treatment</SelectItem>
-                          <SelectItem value="Diabetic Retinopathy Treatment">Diabetic Retinopathy Treatment</SelectItem>
-                          <SelectItem value="Ptosis Repair">Ptosis Repair</SelectItem>
-                          <SelectItem value="Chalazion Removal">Chalazion Removal</SelectItem>
+                          {procedures?.map((procedure) => (
+                            <SelectItem key={procedure.id} value={procedure.procedureName}>
+                              {procedure.procedureName}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -163,18 +160,18 @@ export default function AddProcedureModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Doctor *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingDoctors}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select doctor" />
+                              <SelectValue placeholder={isLoadingDoctors ? "Loading doctors..." : "Select doctor"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Dr. Sarah Chen">Dr. Sarah Chen</SelectItem>
-                            <SelectItem value="Dr. Michael Rodriguez">Dr. Michael Rodriguez</SelectItem>
-                            <SelectItem value="Dr. Emily Johnson">Dr. Emily Johnson</SelectItem>
-                            <SelectItem value="Dr. David Kim">Dr. David Kim</SelectItem>
-                            <SelectItem value="Dr. Lisa Wang">Dr. Lisa Wang</SelectItem>
+                            {doctors?.map((doctor) => (
+                              <SelectItem key={doctor.id} value={doctor.name}>
+                                {doctor.displayName ?? doctor.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
