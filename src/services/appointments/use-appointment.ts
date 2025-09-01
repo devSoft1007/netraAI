@@ -211,3 +211,70 @@ export function useUpdateAppointment() {
 		},
 	})
 }
+
+// Hook for deleting an appointment using the Supabase Edge Function
+export function useDeleteAppointment() {
+	const queryClient = useQueryClient()
+	const { toast } = useToast()
+
+	return useMutation({
+		mutationFn: async (appointmentId: string) => {
+			if (!appointmentId) {
+				throw new Error('Missing appointment id')
+			}
+
+			// Get current session to include auth token
+			const { data: { session } } = await supabase.auth.getSession()
+
+			if (!session) {
+				throw new Error('No authenticated session found')
+			}
+
+			// Call the Supabase Edge Function to delete appointment
+			// Endpoint provided: /functions/v1/delete-appointment
+			// Edge function expects /delete-appointment/:appointment_id (path param)
+			const response = await fetch(`${supabaseUrl}/functions/v1/delete-appointment/${encodeURIComponent(appointmentId)}` , {
+				method: 'DELETE',
+				headers: {
+					Authorization: `Bearer ${session.access_token}`,
+				},
+			})
+
+			if (!response.ok) {
+				const errorText = await response.text().catch(() => '')
+				throw new Error(errorText || 'Failed to delete appointment')
+			}
+
+			const result = await response.json().catch(() => ({}))
+
+			if (result && result.success === false) {
+				throw new Error(result.message || 'Failed to delete appointment')
+			}
+
+			return result
+		},
+		onSuccess: (data) => {
+			// Invalidate cached appointments
+			queryClient.invalidateQueries({ queryKey: ['appointments'] })
+
+			toast({
+				title: 'Appointment Deleted',
+				description: data?.message || 'Appointment has been removed.',
+			})
+
+			return data
+		},
+			onError: (error: any) => {
+				console.error('Error deleting appointment:', error)
+				let description = error?.message || 'Failed to delete appointment. Please try again.'
+				if (/not found or not in your clinic/i.test(description)) {
+					description = 'Appointment not found or you lack clinic permission.'
+				}
+				toast({
+					title: 'Error Deleting Appointment',
+					description,
+					variant: 'destructive',
+				})
+			},
+	})
+}

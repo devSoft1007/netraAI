@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import AddProcedureModal from "@/components/modals/add-procedure-modal";
 import EditProcedureModal from "@/components/modals/edit-procedure-modal";
-import type { Procedure, Patient } from "@shared/schema";
+import type { Patient } from "@/shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import useProcedures, { type Procedure } from "@/services/procedures/use-procedure";
 
 export default function Procedures() {
   const [selectedProcedure, setSelectedProcedure] = useState<Procedure | null>(null);
@@ -17,9 +18,8 @@ export default function Procedures() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: procedures, isLoading } = useQuery<Procedure[]>({
-    queryKey: ['/api/procedures'],
-  });
+  const { data: proceduresResponse, isLoading } = useProcedures();
+  const procedures = proceduresResponse?.data?.procedures || [];
 
   const { data: patients } = useQuery<Patient[]>({
     queryKey: ['/api/patients'],
@@ -124,7 +124,7 @@ export default function Procedures() {
                   <div>
                     <CardTitle className="text-lg">{procedure.procedureName}</CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
-                      Patient: {getPatientName(procedure.patientId)}
+                      Patient: {procedure.patient ? procedure.patient.name : getPatientName(procedure.patient?.id || '')}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -156,7 +156,7 @@ export default function Procedures() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Date:</span>
-                    <span>{format(new Date(procedure.performedDate), 'MMM dd, yyyy')}</span>
+                    <span>{procedure.performedDate ? format(new Date(procedure.performedDate), 'MMM dd, yyyy') : 'N/A'}</span>
                   </div>
                   {procedure.duration && (
                     <div className="flex justify-between text-sm">

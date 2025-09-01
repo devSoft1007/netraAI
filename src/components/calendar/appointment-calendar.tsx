@@ -1,13 +1,15 @@
-import React, { useState, useMemo } from "react";
-import { Calendar, dateFnsLocalizer, View, Views } from "react-big-calendar";
+import { useState, useMemo } from "react";
+import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
+import type { View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarIcon, Clock, User, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useDeleteAppointment } from '@/services/appointments/use-appointment';
 import FloatingPopup from "@/components/ui/floating-popup";
-import type { Appointment, Patient } from "@shared/schema";
+import type { Appointment } from "@shared/schema";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 // date-fns localizer setup
@@ -49,7 +51,13 @@ export default function AppointmentCalendar({
 
   // Use patient name from the appointment data
   const getPatientName = (appointment: Appointment) => {
-    return appointment.patientName || "Unknown Patient";
+    const a: any = appointment as any;
+    return (
+      a.patientName ||
+      a.patient?.name ||
+      [a.patient?.firstName, a.patient?.lastName].filter(Boolean).join(' ') ||
+      'Unknown Patient'
+    );
   };
 
   const getStatusColor = (status: string) => {
@@ -81,8 +89,9 @@ export default function AppointmentCalendar({
       
       // Calculate end time based on duration if available, otherwise default to 1 hour
       const endTime = new Date(appointmentDateTime);
-      if (appointment.duration) {
-        endTime.setMinutes(endTime.getMinutes() + appointment.duration);
+      const duration = (appointment as any).duration;
+      if (duration) {
+        endTime.setMinutes(endTime.getMinutes() + duration);
       } else {
         endTime.setHours(endTime.getHours() + 1);
       }
@@ -142,6 +151,14 @@ export default function AppointmentCalendar({
     };
   };
 
+  const deleteAppointment = useDeleteAppointment();
+
+  const handleDeleteAppointment = (id: string | number) => {
+    // If parent provided a handler, call it as well (backwards compatibility)
+    onDeleteAppointment?.(String(id));
+    deleteAppointment.mutate(String(id));
+  };
+
   const AppointmentPopupContent = ({ appointment }: { appointment: Appointment }) => (
     <div className="space-y-3 min-w-[280px]">
       <div className="flex items-center justify-between">
@@ -154,7 +171,7 @@ export default function AppointmentCalendar({
       <div className="space-y-2 text-sm">
         <div className="flex items-center space-x-2">
           <User className="h-4 w-4 text-gray-500" />
-          <span>{appointment.patientName}</span>
+          <span>{getPatientName(appointment)}</span>
         </div>
         
         <div className="flex items-center space-x-2">
@@ -193,10 +210,11 @@ export default function AppointmentCalendar({
           size="sm"
           variant="destructive"
           className="flex-1"
-          onClick={() => onDeleteAppointment?.(appointment.id)}
+          onClick={() => handleDeleteAppointment(appointment.id)}
+          disabled={deleteAppointment.isPending}
         >
           <Trash2 className="h-3 w-3 mr-1" />
-          Delete
+          {deleteAppointment.isPending ? 'Deleting...' : 'Delete'}
         </Button>
       </div>
     </div>
