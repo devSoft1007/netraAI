@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+// ...existing code...
 import { X, Calendar as CalendarIcon, Clock, User, Stethoscope } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
 // zod resolver not used for edit modal form
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { apiRequest } from "@/lib/queryClient";
+import { useUpdateAppointment } from '@/services/appointments/use-appointment'
 import { useToast } from "@/hooks/use-toast";
 import type { Appointment, Patient } from "@shared/schema";
 import { useDoctors } from '@/services/doctor'
@@ -30,7 +30,6 @@ export default function EditAppointmentModal({
   onClose,
 }: EditAppointmentModalProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // Local form shape for editing (store doctor by id for stability)
   interface FormValues {
@@ -140,27 +139,7 @@ export default function EditAppointmentModal({
     }
   }, [appointment, form, normalizedDoctors, normalizedProcedures]);
 
-  const updateAppointmentMutation = useMutation({
-  mutationFn: async (data: any) => {
-      const response = await apiRequest('PATCH', `/api/appointments/${appointment?.id}`, data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
-      toast({
-        title: "Appointment Updated",
-        description: "The appointment has been updated successfully.",
-      });
-      onClose();
-    },
-    onError: () => {
-      toast({
-        title: "Update Failed",
-        description: "Failed to update the appointment. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const updateAppointmentMutation = useUpdateAppointment();
 
   const onSubmit = (data: FormValues) => {
     // Transform into the payload shape expected by the API
@@ -188,7 +167,18 @@ export default function EditAppointmentModal({
       ],
     };
 
-    updateAppointmentMutation.mutate(payload);
+    if (!appointment?.id) {
+      toast({
+        title: 'Missing Appointment ID',
+        description: 'Cannot update appointment without a valid id.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    updateAppointmentMutation.mutate({ appointmentId: String(appointment.id), data: payload }, {
+      onSuccess: () => onClose(),
+    });
   };
 
   const handleClose = () => {

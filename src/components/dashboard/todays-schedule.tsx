@@ -5,10 +5,11 @@ import type { Appointment, Patient } from "@shared/schema";
 
 export default function TodaysSchedule() {
   const today = format(new Date(), 'yyyy-MM-dd');
-  
-  const { data: appointments, isLoading } = useQuery<Appointment[]>({
-    queryKey: ['/api/appointments', { date: today }],
-  });
+  const appointments: any = []; // Replace with actual fetched appointments
+  const isLoading = false; // Replace with actual loading state
+  // const { data: appointments, isLoading } = useQuery<Appointment[]>({
+  //   queryKey: ['/api/appointments', { date: today }],
+  // });
 
   const { data: patients } = useQuery<Patient[]>({
     queryKey: ['/api/patients'],
@@ -64,6 +65,7 @@ export default function TodaysSchedule() {
       </div>
     );
   }
+
 
   return (
     <div className="medical-card">

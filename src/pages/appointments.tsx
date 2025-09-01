@@ -37,26 +37,26 @@ export default function Appointments() {
   const { data: patientsResponse } = usePatients({ page: 1, limit: 200 });
   const patients = (patientsResponse as any)?.data?.patients ?? (patientsResponse as any)?.patients ?? [];
 
-  const deleteAppointmentMutation = useMutation({
-    mutationFn: async (appointmentId: string) => {
-      const response = await apiRequest('DELETE', `/api/appointments/${appointmentId}`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
-      toast({
-        title: "Appointment Deleted",
-        description: "The appointment has been deleted successfully.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Delete Failed",
-        description: "Failed to delete the appointment. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  // const deleteAppointmentMutation = useMutation({
+  //   mutationFn: async (appointmentId: string) => {
+  //     const response = await apiRequest('DELETE', `/api/appointments/${appointmentId}`);
+  //     return response.json();
+  //   },
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
+  //     toast({
+  //       title: "Appointment Deleted",
+  //       description: "The appointment has been deleted successfully.",
+  //     });
+  //   },
+  //   onError: () => {
+  //     toast({
+  //       title: "Delete Failed",
+  //       description: "Failed to delete the appointment. Please try again.",
+  //       variant: "destructive",
+  //     });
+  //   },
+  // });
 
   const handleEditAppointment = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
@@ -65,7 +65,7 @@ export default function Appointments() {
 
   const handleDeleteAppointment = (appointmentId: string) => {
     if (confirm("Are you sure you want to delete this appointment?")) {
-      deleteAppointmentMutation.mutate(appointmentId);
+      // deleteAppointmentMutation.mutate(appointmentId);
     }
   };
 

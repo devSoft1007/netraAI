@@ -25,10 +25,12 @@ export default function PatientModal({ patient, isOpen, onClose }: PatientModalP
   const [activeTab, setActiveTab] = useState("medical-history");
   // toasts are handled by the service hook; no local toast needed here
 
-  const { data: appointments } = useQuery<Appointment[]>({
-    queryKey: ['/api/appointments', { patientId: patient?.id }],
-    enabled: !!patient?.id,
-  });
+  // const { data: appointments } = useQuery<Appointment[]>({
+  //   queryKey: ['/api/appointments', { patientId: patient?.id }],
+  //   enabled: !!patient?.id,
+  // });
+
+  const appointments: any = []
 
   const { data: procedures } = useQuery<Procedure[]>({
     queryKey: ['/api/procedures', { patientId: patient?.id }],

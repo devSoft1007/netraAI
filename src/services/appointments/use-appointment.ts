@@ -154,3 +154,60 @@ export function useAppointmentQuery(params: GetAppointmentsParams) {
     staleTime: 1000 * 60 * 5,
   })
 }
+
+// Hook for updating an appointment using the Supabase Edge Function
+export function useUpdateAppointment() {
+	const queryClient = useQueryClient()
+	const { toast } = useToast()
+
+	return useMutation({
+		mutationFn: async ({ appointmentId, data }: { appointmentId: string; data: any }) => {
+			// Get current session to include auth token
+			const { data: { session } } = await supabase.auth.getSession()
+
+			if (!session) {
+				throw new Error('No authenticated session found')
+			}
+
+			const response = await fetch(`${supabaseUrl}/functions/v1/update-appointment/${appointmentId}`, {
+				method: 'PUT',
+				headers: {
+					Authorization: `Bearer ${session.access_token}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(data),
+			})
+
+			if (!response.ok) {
+				const errText = await response.text()
+				throw new Error(`HTTP error ${response.status}: ${errText}`)
+			}
+
+			const result = await response.json()
+
+			if (!result.success) {
+				throw new Error(result.error || 'Failed to update appointment')
+			}
+
+			return result
+		},
+		onSuccess: (data) => {
+			queryClient.invalidateQueries({ queryKey: ['appointments'] })
+
+			toast({
+				title: 'Appointment Updated',
+				description: data?.message || 'Appointment updated successfully.',
+			})
+
+			return data
+		},
+		onError: (error: any) => {
+			console.error('Error updating appointment:', error)
+			toast({
+				title: 'Error Updating Appointment',
+				description: error?.message || 'Failed to update appointment. Please try again.',
+				variant: 'destructive',
+			})
+		},
+	})
+}
