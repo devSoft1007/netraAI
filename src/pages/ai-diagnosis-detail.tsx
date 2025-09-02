@@ -141,6 +141,25 @@ export default function AiDiagnosisDetail() {
     return [...drProbRows, ...glaucomaProbRows].slice(0, 14);
   }, [drProbRows, glaucomaProbRows]);
 
+  // Compute after other derived data but BEFORE any conditional early returns to keep hook order stable
+  const riskLabel = titleCase(analysis?.riskLevel);
+
+  // Data for model confidence chart (one bar per model to allow independent tooltip)
+  const modelConfidenceData = useMemo(() => ([
+    {
+      model: 'DR',
+      value: Number.isFinite(analysis?.drConfidence) ? Number(analysis!.drConfidence.toFixed(2)) : 0,
+      prediction: analysis?.drPrediction || '—',
+      risk: riskLabel || '—',
+    },
+    {
+      model: 'Glaucoma',
+      value: Number.isFinite(analysis?.glaucomaConfidence) ? Number(analysis!.glaucomaConfidence.toFixed(2)) : 0,
+      prediction: analysis?.glaucomaPrediction || '—',
+      risk: riskLabel || '—',
+    }
+  ]), [analysis, riskLabel]);
+
   const riskTone = (risk?: string | null) => {
     switch (risk) {
       case 'low': return 'bg-green-50 text-green-700 ring-1 ring-green-200';
@@ -188,7 +207,6 @@ export default function AiDiagnosisDetail() {
     );
   }
 
-  const riskLabel = titleCase(analysis.riskLevel);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -270,39 +288,39 @@ export default function AiDiagnosisDetail() {
             </CardHeader>
             <CardContent>
               <div className="h-72">
-                <ChartContainer className="h-full !aspect-auto" config={{ dr:{ label:'DR', color:'var(--chart-1)' }, glaucoma:{ label:'Glaucoma', color:'var(--chart-2)' } }}>
-                  <BarChart data={[{
-                    label:'Confidence',
-                    dr: Number.isFinite(analysis.drConfidence)? Number(analysis.drConfidence.toFixed(2)):0,
-                    glaucoma: Number.isFinite(analysis.glaucomaConfidence)? Number(analysis.glaucomaConfidence.toFixed(2)):0,
-                    drPrediction: analysis.drPrediction || '—',
-                    glaucomaPrediction: analysis.glaucomaPrediction || '—',
-                    risk: riskLabel || '—'
-                  }]} margin={{ left: 16, right: 16, top: 24, bottom: 8 }}>
+                <ChartContainer className="h-full !aspect-auto" config={{ value:{ label:'Confidence', color:'var(--chart-1)' } }}>
+                  <BarChart data={modelConfidenceData} margin={{ left: 16, right: 16, top: 24, bottom: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="label" tick={false} />
+                    <XAxis dataKey="model" />
                     <YAxis domain={[0,100]} tickFormatter={(v:number)=> `${v}%`} width={45} />
-                    <ChartTooltip
-                      cursor={{ fill: 'transparent' }}
-                      content={<ChartTooltipContent hideLabel formatter={(val, name, _item, _idx, payload: any)=> {
-                        const prediction = name === 'DR' ? payload.drPrediction : payload.glaucomaPrediction;
-                        return (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="font-medium">{name} Model</span>
-                            <span className="text-[11px] text-muted-foreground">Prediction: {prediction}</span>
-                            {payload.risk && name === 'DR' && (
-                              <span className="text-[11px] text-muted-foreground">Overall Risk: {payload.risk}</span>
-                            )}
-                            <span className="font-mono">{Math.round(val as number)}%</span>
+                    <ChartTooltip cursor={{ fill: 'transparent' }} content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const item: any = payload[0].payload;
+                      const color = item.model === 'DR' ? 'var(--chart-1)' : 'var(--chart-2)';
+                      return (
+                        <div className="grid gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-xs shadow-xl relative pl-3" style={{ borderLeft: `4px solid ${color}` }}>
+                          <div className="flex items-center gap-1.5 font-medium" style={{ color }}>
+                            <span className="inline-block w-2 h-2 rounded-sm" style={{ background: color }} />
+                            {item.model} Model
                           </div>
-                        );
-                      }} />}
-                    />
-                    <Bar dataKey="dr" name="DR" fill="var(--chart-1)" radius={[4,4,0,0]}>
-                      <LabelList dataKey="dr" position="top" formatter={(v:number)=> `${Math.round(v)}%`} className="fill-professional-dark text-[11px]" />
-                    </Bar>
-                    <Bar dataKey="glaucoma" name="Glaucoma" fill="var(--chart-2)" radius={[4,4,0,0]}>
-                      <LabelList dataKey="glaucoma" position="top" formatter={(v:number)=> `${Math.round(v)}%`} className="fill-professional-dark text-[11px]" />
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Prediction</span>
+                            <span className="px-1.5 py-0.5 rounded-sm font-medium" style={{ background: color, color: 'white' }}>{item.prediction}</span>
+                          </div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Confidence</span><span className="font-mono" style={{ color }}>{Math.round(item.value)}%</span></div>
+                          {item.model === 'DR' && (
+                            <div className="flex justify-between"><span className="text-muted-foreground">Overall Risk</span><span className="font-mono">
+                              <span className="px-1 py-0.5 rounded bg-muted text-foreground border border-border/40 capitalize">{item.risk}</span>
+                            </span></div>
+                          )}
+                        </div>
+                      );
+                    }} />
+                    <Bar dataKey="value" radius={[4,4,0,0]}>
+                      {modelConfidenceData.map(d => (
+                        <Cell key={d.model} fill={d.model==='DR' ? 'var(--chart-1)' : 'var(--chart-2)'} />
+                      ))}
+                      <LabelList dataKey="value" position="top" formatter={(v:number)=> `${Math.round(v)}%`} className="fill-professional-dark text-[11px]" />
                     </Bar>
                   </BarChart>
                 </ChartContainer>

@@ -88,7 +88,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                       <FormItem>
                         <FormLabel>First Name *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter first name" {...field} />
+                          <Input placeholder="Enter first name" {...field} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -102,7 +102,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                       <FormItem>
                         <FormLabel>Last Name *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter last name" {...field} />
+                          <Input placeholder="Enter last name" {...field} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -121,7 +121,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                           <span>Email Address *</span>
                         </FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="patient@example.com" {...field} />
+                          <Input type="email" placeholder="patient@example.com" {...field} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -138,7 +138,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                           <span>Phone Number *</span>
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="(555) 123-4567" {...field} />
+                          <Input placeholder="(555) 123-4567" {...field} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -161,6 +161,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                             type="date" 
                             value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
                             onChange={(e) => field.onChange(new Date(e.target.value))}
+                            className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring"
                           />
                         </FormControl>
                         <FormMessage />
@@ -176,7 +177,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                         <FormLabel>Gender *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                               <SelectValue placeholder="Select gender" />
                             </SelectTrigger>
                           </FormControl>
@@ -203,7 +204,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                         <span>Address</span>
                       </FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Enter full address" className="min-h-[80px]" {...field} />
+                        <Textarea placeholder="Enter full address" className="min-h-[80px] border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -226,7 +227,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                       <FormItem>
                         <FormLabel>Emergency Contact Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Contact person name" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} />
+                          <Input placeholder="Contact person name" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -240,7 +241,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                       <FormItem>
                         <FormLabel>Emergency Contact Phone</FormLabel>
                         <FormControl>
-                          <Input placeholder="(555) 987-6543" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} />
+                          <Input placeholder="(555) 987-6543" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -263,7 +264,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                     <FormItem>
                       <FormLabel>Insurance Information</FormLabel>
                       <FormControl>
-                        <Input placeholder="Insurance provider and policy details" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} />
+                        <Input placeholder="Insurance provider and policy details" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -279,7 +280,7 @@ export default function AddPatientModal({ isOpen, onClose }: AddPatientModalProp
                       <FormControl>
                         <Textarea
                           placeholder="Previous medical conditions, allergies, medications, surgical history... (one per line)"
-                          className="min-h-[120px]"
+                          className="min-h-[120px] border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring"
                           value={Array.isArray(field.value) ? field.value.join('\n') : (typeof field.value === 'string' ? field.value : '')}
                           onChange={(e) => field.onChange(e.target.value)}
                         />
