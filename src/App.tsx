@@ -12,6 +12,7 @@ import Patients from "@/pages/patients";
 import Appointments from "@/pages/appointments";
 import Procedures from "@/pages/procedures";
 import AiDiagnosis from "@/pages/ai-diagnosis";
+import AiDiagnosisDetail from "@/pages/ai-diagnosis-detail";
 import Billing from "@/pages/billing";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
@@ -79,6 +80,11 @@ function AppRouter() {
       <Route path="/ai-diagnosis">
         <ProtectedRoute>
           <AiDiagnosis />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/ai-diagnosis/:id">
+        <ProtectedRoute>
+          <AiDiagnosisDetail />
         </ProtectedRoute>
       </Route>
       

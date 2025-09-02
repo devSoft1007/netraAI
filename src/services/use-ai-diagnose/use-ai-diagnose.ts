@@ -163,18 +163,27 @@ export function useListAiAnalyses(limit: number = 5) {
         }
         const data: ListAnalysesResponse = await res.json()
         if (!data.success) throw new Error('Failed to fetch analyses')
-        return data.analyses.map(rec => ({
+    return data.analyses.map(rec => ({
           id: rec.id,
           patientId: rec.patient_id,
-          imageUrl: rec.image_url || '',
-          diagnosis: buildDiagnosisSummary(rec),
-          confidence: deriveConfidence(rec),
-          severity: deriveSeverity(rec),
-          recommendations: [],
-          analyzedBy: rec.analyzed_by || 'AI Model',
-          reviewedByDoctor: (rec.status || '').toLowerCase().includes('review'),
-          doctorNotes: rec.clinical_notes || undefined,
-          createdAt: new Date(rec.created_at)
+            imageUrl: rec.image_url || '',
+            diagnosis: buildDiagnosisSummary(rec),
+            confidence: deriveConfidence(rec),
+            severity: deriveSeverity(rec),
+            recommendations: [],
+            analyzedBy: rec.analyzed_by || 'AI Model',
+            reviewedByDoctor: (rec.status || '').toLowerCase().includes('review'),
+            doctorNotes: rec.clinical_notes || undefined,
+            createdAt: new Date(rec.created_at),
+            // Detailed fields for hover popper
+      drPrediction: rec.dr_prediction,
+      drConfidence: rec.dr_confidence,
+      drProbability: normalizeProbability(rec.dr_probability),
+      glaucomaPrediction: rec.glaucoma_prediction,
+      glaucomaConfidence: rec.glaucoma_confidence,
+      glaucomaProbability: deriveGlaucomaProbability(rec),
+            riskLevel: rec.risk_level,
+            status: rec.status
         }))
       } catch (err: any) {
         toast({ title: 'Failed to load analyses', description: err.message, variant: 'destructive' })
@@ -248,4 +257,54 @@ function deriveSeverity(r: RawAnalysisRecord): 'normal' | 'mild' | 'moderate' | 
   if (risk === 'moderate') return 'moderate'
   if (risk === 'severe' || risk === 'high' || risk === 'critical') return 'severe'
   return 'normal'
+}
+
+// Normalize probability payloads (could arrive as JSON string or object)
+function normalizeProbability(input: any): Record<string, number> | null {
+  if (!input) return null
+  let obj = input
+  if (typeof input === 'string') {
+    try { obj = JSON.parse(input) } catch { return null }
+  }
+  if (typeof obj !== 'object' || Array.isArray(obj)) return null
+  const out: Record<string, number> = {}
+  for (const [k,v] of Object.entries(obj)) {
+    const num = typeof v === 'number' ? v : parseFloat(String(v))
+    if (!Number.isNaN(num)) out[k] = num
+  }
+  return Object.keys(out).length ? out : null
+}
+
+// Glaucoma probability may arrive as a single number rather than a map.
+// Example payload: glaucoma_confidence = 0.809 (predicted class), glaucoma_probability = 0.191 (other class)
+// We synthesize a 2-class map so UI bars render consistently.
+function deriveGlaucomaProbability(r: RawAnalysisRecord): Record<string, number> | null {
+  const raw = r.glaucoma_probability
+  // If already an object or JSON string representing object, reuse generic normalization
+  if (raw && (typeof raw === 'object' || (typeof raw === 'string' && (raw as string).trim().startsWith('{')))) {
+    return normalizeProbability(raw)
+  }
+  // If it's a single number, build a distribution.
+  if (typeof raw === 'number') {
+    const other = raw
+    let predicted = r.glaucoma_confidence
+    // If predicted not provided, derive as 1 - other (when plausible)
+    if (typeof predicted !== 'number') {
+      predicted = 1 - other
+    }
+    // Clamp to [0,1]
+    const pPred = Math.min(Math.max(predicted!, 0), 1)
+    const pOther = Math.min(Math.max(other, 0), 1)
+    // Normalize sum if off (avoid dividing by zero)
+    const sum = pPred + pOther
+    const normPred = sum > 0 ? pPred / sum : 0
+    const normOther = sum > 0 ? pOther / sum : 0
+    const predictionLabel = (r.glaucoma_prediction || '').toLowerCase()
+    const isNormal = predictionLabel === 'normal' || predictionLabel.includes('normal')
+    if (isNormal) {
+      return { Normal: normPred, Glaucoma: normOther }
+    }
+    return { Glaucoma: normPred, Normal: normOther }
+  }
+  return null
 }

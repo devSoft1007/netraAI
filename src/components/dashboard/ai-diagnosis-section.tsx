@@ -7,6 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import type { Patient } from "@shared/schema";
 import { useStoreAiDiagnosis, useListAiAnalyses } from "@/services/use-ai-diagnose";
+import AnalysisHoverCard from "@/components/ui/analysis-hover-card";
 
 type FeedbackPayload = {
   analysis_id: string;
@@ -540,23 +541,29 @@ const useListFeedback = (analysisId?: string) =>
           ) : !recentDiagnoses || recentDiagnoses.length === 0 ? (
             <div className="text-center py-8 text-gray-500">No AI diagnoses available yet</div>
           ) : (
-            recentDiagnoses.map((result: any) => (
-              <div key={result.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-diagnostic-purple/10 rounded-lg flex items-center justify-center">
-                    <Brain className="text-diagnostic-purple" />
+      recentDiagnoses.map((result: any) => (
+              <AnalysisHoverCard
+                key={result.id}
+                data={result}
+                placement="right"
+              >
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => (window.location.href = `/ai-diagnosis/${result.id}`)}>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-diagnostic-purple/10 rounded-lg flex items-center justify-center">
+                      <Brain className="text-diagnostic-purple" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-professional-dark">{getPatientName(result.patientId)}</p>
+                      <p className="text-sm text-gray-600 line-clamp-1 max-w-[260px]">{result.diagnosis}</p>
+                      <p className="text-xs text-gray-500">{format(new Date(result.createdAt), 'MMM dd, yyyy HH:mm')}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-professional-dark">{getPatientName(result.patientId)}</p>
-                    <p className="text-sm text-gray-600">{result.diagnosis}</p>
-                    <p className="text-xs text-gray-500">{format(new Date(result.createdAt), 'MMM dd, yyyy HH:mm')}</p>
+                  <div className="text-right">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityColor(result.severity)}`}>{getSeverityText(result.severity)}</span>
+                    <p className="text-xs text-gray-500 mt-1">{result.confidence}% confidence</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityColor(result.severity)}`}>{getSeverityText(result.severity)}</span>
-                  <p className="text-xs text-gray-500 mt-1">{result.confidence}% confidence</p>
-                </div>
-              </div>
+              </AnalysisHoverCard>
             ))
           )}
         </div>
