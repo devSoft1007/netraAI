@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import type { AiDiagnosis, Patient } from "@shared/schema";
+import { useStoreAiDiagnosis } from "@/services/use-ai-diagnose";
 
 // Interface for your API response
 interface DiagnosisResponse {
@@ -43,7 +44,8 @@ export default function AiDiagnosisSection() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [analysisResult, setAnalysisResult] = useState<DiagnosisResponse | null>(null);
   const { toast } = useToast();
-
+  const queryClient = useQueryClient();
+  
   // const { data: recentDiagnoses, isLoading } = useQuery<AiDiagnosis[]>({
   //   queryKey: ['/'],
   // });
@@ -52,6 +54,8 @@ export default function AiDiagnosisSection() {
   const { data: patients } = useQuery<Patient[]>({
     queryKey: ['/api/patients'],
   });
+
+  const { mutate: storeAiDiagnosis } = useStoreAiDiagnosis();
 
   // ✅ ADD THIS MISSING FUNCTION
   const getSeverityFromResponse = (data: DiagnosisResponse): string => {
@@ -76,23 +80,15 @@ export default function AiDiagnosisSection() {
     onSuccess: (data: DiagnosisResponse) => {
       setAnalysisResult(data);
       
-      // Transform and save to your database
-      const diagnosisData = {
-        patientId: patients?.[0]?.id || 'mock-patient-id',
-        imageUrl: previewUrl || '',
-        diagnosis: `DR: ${data.diabetic_retinopathy.prediction}, Glaucoma: ${data.glaucoma.prediction}`,
-        severity: getSeverityFromResponse(data),
-        confidence: Math.round((data.diabetic_retinopathy.confidence + data.glaucoma.confidence) / 2 * 100),
-        details: {
-          diabetic_retinopathy: data.diabetic_retinopathy,
-          glaucoma: data.glaucoma,
-          meta: data.meta
-        }
-      };
+      // Store the AI diagnosis in the database
+      storeAiDiagnosis({
+        aiResponse: data,
+        imageUrl: previewUrl || ''
+      });
       
       toast({
         title: "Analysis Complete",
-        description: "Image has been successfully analyzed.",
+        description: "Image has been successfully analyzed and stored.",
         variant: "default",
       });
     },

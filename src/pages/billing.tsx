@@ -1,12 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { DollarSign, Plus, Filter, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import AddPaymentModal from "@/components/modals/add-payment-modal";
 import type { Payment, Patient } from "@shared/schema";
 
 export default function Billing() {
+  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const { data: payments, isLoading } = useQuery<Payment[]>({
     queryKey: ['/api/payments'],
   });
@@ -36,13 +39,13 @@ export default function Billing() {
   };
 
   const totalRevenue = payments?.filter((payment: Payment) => payment.paymentStatus === 'paid')
-    .reduce((sum, payment) => sum + parseFloat(payment.amount), 0) || 0;
+    .reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
 
   const pendingPayments = payments?.filter((payment: Payment) => payment.paymentStatus === 'pending')
-    .reduce((sum, payment) => sum + parseFloat(payment.amount), 0) || 0;
+    .reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
 
   const overduePayments = payments?.filter((payment: Payment) => payment.paymentStatus === 'overdue')
-    .reduce((sum, payment) => sum + parseFloat(payment.amount), 0) || 0;
+    .reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
 
   if (isLoading) {
     return (
@@ -54,6 +57,7 @@ export default function Billing() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <AddPaymentModal isOpen={isAddPaymentOpen} onClose={() => setIsAddPaymentOpen(false)} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h1 className="text-2xl font-semibold text-professional-dark">Billing & Payments</h1>
@@ -64,7 +68,7 @@ export default function Billing() {
             <FileText className="h-4 w-4 mr-2" />
             Generate Invoice
           </Button>
-          <Button className="medical-button-primary">
+      <Button className="medical-button-primary" onClick={() => setIsAddPaymentOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Payment
           </Button>
@@ -164,7 +168,7 @@ export default function Billing() {
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-semibold text-professional-dark">
-                        ${parseFloat(payment.amount).toLocaleString()}
+                        ${Number(payment.amount).toLocaleString()}
                       </p>
                       <Badge className={getStatusColor(payment.paymentStatus)}>
                         {payment.paymentStatus.charAt(0).toUpperCase() + payment.paymentStatus.slice(1)}
