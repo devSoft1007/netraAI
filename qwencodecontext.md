@@ -1,146 +1,63 @@
-/**********************************************************************
- *  POST /functions/v1/store-analysis
- **********************************************************************/
-import { createClient } from "npm:@supabase/supabase-js@2.39.3";
-
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
-};
-
-Deno.serve(async (req) => {
-  /* ─── CORS / verb guard ─── */
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST") return new Response("Method Not Allowed", {
-    status: 405,
-    headers: cors
-  });
-
-  /* ─── init Supabase ─── */
-  const sb = createClient(
-    Deno.env.get("SUPABASE_URL"),
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-  );
-
-  /* ─── auth ─── */
-  const jwt = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!jwt) return err("Missing bearer token", "AUTH");
-
-  const { data: { user }, error: authErr } = await sb.auth.getUser(jwt);
-  if (authErr || !user) return err("Invalid token", "AUTH");
-
-  /* ─── get user's clinic ─── */
-  const [{ data: doc }, { data: staff }] = await Promise.all([
-    sb.from("doctors").select("clinic_id").eq("auth_id", user.id).maybeSingle(),
-    sb.from("staff").select("clinic_id").eq("auth_id", user.id).maybeSingle()
-  ]);
-
-  const clinicId = doc?.clinic_id ?? staff?.clinic_id;
-  if (!clinicId) return err("User not linked to a clinic", "IDENTITY");
-
-  /* ─── parse request body ─── */
-  let body;
-  try {
-    body = await req.json();
-  } catch (e) {
-    return err("Invalid JSON body", "VALIDATION");
-  }
-
-  const { aiResponse, imageUrl } = body;
-  if (!aiResponse || !imageUrl) {
-    return err("Missing aiResponse or imageUrl", "VALIDATION");
-  }
-
-  /* ─── map AI response to database fields ─── */
-  function mapSeverityToRisk(severity) {
-    const riskMap = { 0: 'low', 1: 'low', 2: 'moderate', 3: 'moderate', 4: 'high' };
-    return riskMap[severity] || 'unknown';
-  }
-
-  const dbRecord = {
-    clinic_id: clinicId,
-    patient_id: null, // Anonymous analysis
-    analyzed_by: staff?.id || null, // If analyzed by staff
-    image_url: imageUrl,
-    image_metadata: aiResponse.meta || {},
-    
-    // DR fields
-    dr_prediction: aiResponse.diabetic_retinopathy?.prediction,
-    dr_confidence: aiResponse.diabetic_retinopathy?.confidence,
-    dr_probability: aiResponse.diabetic_retinopathy?.probabilities || {},
-    
-    // Glaucoma fields
-    glaucoma_prediction: aiResponse.glaucoma?.prediction,
-    glaucoma_confidence: aiResponse.glaucoma?.confidence,
-    glaucoma_probability: aiResponse.glaucoma?.probabilities?.Glaucoma || null,
-    
-    // Risk assessment
-    risk_level: mapSeverityToRisk(aiResponse.diabetic_retinopathy?.severity_level),
-    
-    // Clinical notes
-    clinical_notes: `DR: ${aiResponse.diabetic_retinopathy?.doctor_note || 'No note'}\nGlaucoma: ${aiResponse.glaucoma?.doctor_note || 'No note'}`,
-    
-    status: 'completed'
-  };
-
-  /* ─── insert analysis result ─── */
-  const { data: analysisResult, error: insertErr } = await sb
-    .from("ai_analysis_results")
-    .insert(dbRecord)
-    .select()
-    .single();
-
-  if (insertErr) {
-    return err(`Failed to store analysis: ${insertErr.message}`, "INSERT_FAIL");
-  }
-
-  return new Response(JSON.stringify({
-    success: true,
-    analysis_id: analysisResult.id,
-    message: "Analysis stored successfully"
-  }), {
-    status: 201,
-    headers: {
-      "Content-Type": "application/json",
-      ...cors
-    }
-  });
-});
-
-/* helper */
-function err(msg, ctx, code = 400) {
-  return new Response(JSON.stringify({
-    error: msg,
-    context: ctx
-  }), {
-    status: code,
-    headers: {
-      "Content-Type": "application/json",
-      ...cors
-    }
-  });
-}
-
-
-
-// Request Body Format:
-{
-  "aiResponse": {
-    "diabetic_retinopathy": {
-      "prediction": "Proliferative DR",
-      "confidence": 0.996,
-      "probabilities": { "No DR": 0, "Proliferative DR": 0.996 },
-      "severity_level": 4,
-      "doctor_note": "Immediate treatment advised"
-    },
-    "glaucoma": {
-      "prediction": "Normal", 
-      "confidence": 0.5,
-      "probabilities": { "Normal": 0.5, "Glaucoma": 0.5 },
-      "doctor_note": "No signs of glaucoma"
-    },
-    "meta": { "request_id": "05d905ff", "model_version": "v1" }
-  },
-  "imageUrl": "https://storage.url/image.jpg"
-}
+ SyntaxError: C:\Users\bkr72\OneDrive\Desktop\Work\netra-ai\src\components\modals\patient-modal.tsx: Unterminated string constant. (319:79)
+        │
+        │   317 |                           placeholder="Previous medical conditions, allergies, medications, surgical history... (one per line)"
+        │   318 |                           className="min-h-[120px] border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring"
+        │ > 319 |                           value={Array.isArray(field.value) ? field.value.join('
+        │       |                                                                                ^
+        │   320 | ') : (typeof field.value === 'string' ? field.value : '')}
+        │   321 |                           onChange={(e) => field.onChange(e.target.value)}
+        │   322 |                         />
+        │     at constructor (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:367:19)
+        │     at TypeScriptParserMixin.raise (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:6630:19)
+        │     at Object.unterminated (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:5695:20)
+        │     at readStringContents (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:5437:16)
+        │     at TypeScriptParserMixin.readString (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:6529:9)
+        │     at TypeScriptParserMixin.getTokenFromCode (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:6289:14)
+        │     at TypeScriptParserMixin.getTokenFromCode (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:4830:11)
+        │     at TypeScriptParserMixin.getTokenFromCode (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10009:11)
+        │     at TypeScriptParserMixin.nextToken (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:5813:10)
+        │     at TypeScriptParserMixin.next (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:5723:10)
+        │     at TypeScriptParserMixin.parseCoverCallAndAsyncArrowHead (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:11169:10)
+        │     at TypeScriptParserMixin.parseSubscript (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:11120:19)
+        │     at TypeScriptParserMixin.parseSubscript (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:9358:18)
+        │     at TypeScriptParserMixin.parseSubscripts (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:11094:19)
+        │     at TypeScriptParserMixin.parseExprSubscripts (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:11085:17)
+        │     at TypeScriptParserMixin.parseUpdate (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:11066:21)
+        │     at TypeScriptParserMixin.parseMaybeUnary (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:11046:23)
+        │     at TypeScriptParserMixin.parseMaybeUnary (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:9857:18)
+        │     at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10899:61)
+        │     at TypeScriptParserMixin.parseExprOps (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10904:23)
+        │     at TypeScriptParserMixin.parseMaybeConditional (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10881:23)
+        │     at TypeScriptParserMixin.parseMaybeAssign (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10831:21)
+        │     at TypeScriptParserMixin.parseMaybeAssign (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:9806:20)
+        │     at .\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10800:39
+        │     at TypeScriptParserMixin.allowInAnd (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:12432:12)
+        │     at TypeScriptParserMixin.parseMaybeAssignAllowIn (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10800:17)
+        │     at TypeScriptParserMixin.parseConditional (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10891:30)
+        │     at TypeScriptParserMixin.parseConditional (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:9631:18)
+        │     at TypeScriptParserMixin.parseMaybeConditional (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10885:17)
+        │     at TypeScriptParserMixin.parseMaybeAssign (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10831:21)
+        │     at TypeScriptParserMixin.parseMaybeAssign (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:9806:20)
+        │     at TypeScriptParserMixin.parseExpressionBase (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10784:23)
+        │     at .\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10780:39
+        │     at TypeScriptParserMixin.allowInAnd (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:12432:12)
+        │     at TypeScriptParserMixin.parseExpression (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10780:17)
+        │     at TypeScriptParserMixin.jsxParseExpressionContainer (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:4665:31)
+        │     at TypeScriptParserMixin.jsxParseAttributeValue (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:4637:21)
+        │     at TypeScriptParserMixin.jsxParseAttribute (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:4686:38)
+        │     at TypeScriptParserMixin.jsxParseOpeningElementAfterName (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:4700:28)
+        │     at TypeScriptParserMixin.jsxParseOpeningElementAfterName (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:10067:18)
+        │     at TypeScriptParserMixin.jsxParseOpeningElementAt (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:4695:17)
+        │     at TypeScriptParserMixin.jsxParseElementAt (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:4719:33)
+        │     at TypeScriptParserMixin.jsxParseElementAt (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:4731:32)
+        │     at TypeScriptParserMixin.jsxParseElementAt (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:4731:32)
+        │     at TypeScriptParserMixin.jsxParseElement (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:4782:17)
+        │     at TypeScriptParserMixin.parseExprAtom (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:4792:19)
+        │     at TypeScriptParserMixin.parseExprSubscripts (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:11081:23)
+        │     at TypeScriptParserMixin.parseUpdate (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:11066:21)
+        │     at TypeScriptParserMixin.parseMaybeUnary (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:11046:23)
+        │     at TypeScriptParserMixin.parseMaybeUnary (.\node_modules\.pnpm\@babel+parser@7.28.3\node_modules\@babel\parser\lib\index.js:9857:18)
+      
+ @ ./src/pages/patients.tsx
+ @ ./src/App.tsx
+ @ ./src/index.tsx

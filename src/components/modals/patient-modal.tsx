@@ -1,19 +1,17 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { usePatientById, useUpdatePatient } from '@/services/use-patient/use-patient'
-import { X } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
-import type { Patient, Appointment, Procedure, Payment } from "@shared/schema";
-import PatientBasicInfo from './patient-basic-info'
-import InsuranceInfoCard from './insurance-info-card'
-import PatientTabs from './patient-tabs'
-import EmergencyContactCard from './emergency-contact-card'
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { insertPatientSchema, type InsertPatient } from "@shared/schema";
+import type { Patient } from "@shared/schema";
 
 interface PatientModalProps {
   patient: Patient | null;
@@ -22,39 +20,29 @@ interface PatientModalProps {
 }
 
 export default function PatientModal({ patient, isOpen, onClose }: PatientModalProps) {
-  const [activeTab, setActiveTab] = useState("medical-history");
-  // toasts are handled by the service hook; no local toast needed here
-
-  // const { data: appointments } = useQuery<Appointment[]>({
-  //   queryKey: ['/api/appointments', { patientId: patient?.id }],
-  //   enabled: !!patient?.id,
-  // });
-
-  const appointments: any = []
-
-  const { data: procedures } = useQuery<Procedure[]>({
-    queryKey: ['/api/procedures', { patientId: patient?.id }],
-    enabled: !!patient?.id,
-  });
-
-  const { data: payments } = useQuery<Payment[]>({
-    queryKey: ['/api/payments', { patientId: patient?.id }],
-    enabled: !!patient?.id,
-  });
-
   const updatePatientMutation = useUpdatePatient();
-
-  // Fetch the full patient payload from the Edge Function and pre-populate modal fields
+  
+  // Fetch the full patient payload from the Edge Function
   const { data: patientByIdData } = usePatientById(patient?.id)
 
-  // Local editable state derived from the patient prop
-  const [editedPatient, setEditedPatient] = useState<Partial<Patient> & Record<string, any>>(() => ({ ...patient }));
+  const form = useForm<InsertPatient>({
+    resolver: zodResolver(insertPatientSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      dateOfBirth: new Date(),
+      gender: "",
+      address: "",
+      emergencyContactName: undefined,
+      emergencyContactPhone: undefined,
+      insuranceProvider: undefined,
+      medicalHistory: undefined,
+    },
+  });
 
-  useEffect(() => {
-    setEditedPatient({ ...patient });
-  }, [patient]);
-
-  // When the edge function returns the formatted patient, map it into the editor state.
+  // When the edge function returns the formatted patient, pre-populate the form
   useEffect(() => {
     if (!patientByIdData?.patient || !isOpen) return
 
@@ -67,249 +55,293 @@ export default function PatientModal({ patient, isOpen, onClose }: PatientModalP
 
     const emergency = p.emergencyContact || p.emergency_contact || {}
 
-    setEditedPatient(prev => ({
-      ...prev,
+    form.reset({
       firstName,
       lastName,
-      dateOfBirth: p.dateOfBirth ?? p.dateOfBirth ?? prev.dateOfBirth,
-      email: p.email ?? prev.email,
-      phone: p.phone ?? prev.phone,
-      address: p.address ?? prev.address,
-      insuranceProvider: p.insurance ?? prev.insuranceProvider ?? '',
-      insurancePolicyNumber: prev.insurancePolicyNumber ?? '',
-      insuranceGroupNumber: prev.insuranceGroupNumber ?? '',
-      medicalHistory: p.medicalHistory ?? prev.medicalHistory,
-      currentMedications: p.currentMedications ?? prev.currentMedications ?? [],
-      allergies: p.allergies ?? prev.allergies ?? [],
-      emergencyContactName: emergency?.name || emergency?.fullName || emergency?.contactName || prev.emergencyContactName || '',
-      emergencyContactPhone: emergency?.phone || emergency?.contactPhone || prev.emergencyContactPhone || '',
-      isActive: typeof p.isActive === 'boolean' ? p.isActive : (p.status === 'Active' || prev.isActive),
-      memberSince: p.memberSince ?? prev.memberSince,
-    }))
-  }, [patientByIdData, isOpen])
+      email: p.email ?? '',
+      phone: p.phone ?? '',
+      dateOfBirth: p.dateOfBirth ? new Date(p.dateOfBirth) : new Date(),
+      gender: p.gender ?? '',
+      address: p.address ?? '',
+      emergencyContactName: emergency?.name || emergency?.fullName || emergency?.contactName || '',
+      emergencyContactPhone: emergency?.phone || emergency?.contactPhone || '',
+      insuranceProvider: p.insurance ?? '',
+      medicalHistory: p.medicalHistory ?? '',
+    })
+  }, [patientByIdData, isOpen, form])
+
+  const onSubmit = (data: InsertPatient) => {
+    // Build payload but avoid sending nulls: use undefined for empty optional strings.
+    const payload = {
+      id: patient?.id,
+      ...data,
+      emergencyContactName: data.emergencyContactName ? data.emergencyContactName : undefined,
+      emergencyContactPhone: data.emergencyContactPhone ? data.emergencyContactPhone : undefined,
+      insuranceProvider: data.insuranceProvider ? data.insuranceProvider : undefined,
+      // medicalHistory is a free-form string (textarea); keep as-is or undefined
+      medicalHistory: typeof data.medicalHistory === 'string' && data.medicalHistory.trim().length > 0 ? data.medicalHistory : undefined,
+    } as any;
+
+    // Call the edge function with the patient data
+    updatePatientMutation.mutate(payload, {
+      onSuccess: () => {
+        onClose();
+      }
+    });
+  };
+
+  const handleClose = () => {
+    form.reset();
+    onClose();
+  };
 
   if (!patient) return null;
 
-  // Safely convert possible string/Date/undefined values to a valid Date or null
-  const toSafeDate = (value: any): Date | null => {
-    if (!value) return null;
-    const d = value instanceof Date ? value : new Date(value);
-    return isNaN(d.getTime()) ? null : d;
-  };
-
-  const getAge = (dateOfBirth: any): string | number => {
-    const birthDate = toSafeDate(dateOfBirth);
-    if (!birthDate) return 'N/A';
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  // Normalize patient object for shallow comparison (dates -> ISO strings, arrays as JSON)
-  const normalizeForCompare = (p: Partial<Patient> | null) => {
-    if (!p) return null;
-    return {
-      firstName: p.firstName || '',
-      lastName: p.lastName || '',
-      gender: p.gender || '',
-      dateOfBirth: toSafeDate(p.dateOfBirth)?.toISOString() || '',
-      email: p.email || '',
-      phone: p.phone || '',
-      address: p.address || '',
-      insuranceProvider: p.insuranceProvider || '',
-      insurancePolicyNumber: p.insurancePolicyNumber || '',
-      insuranceGroupNumber: p.insuranceGroupNumber || '',
-      medicalHistory: p.medicalHistory || '',
-      currentMedications: Array.isArray(p.currentMedications) ? p.currentMedications : (p.currentMedications ? [p.currentMedications as any] : []),
-      allergies: Array.isArray(p.allergies) ? p.allergies : (p.allergies ? [p.allergies as any] : []),
-      emergencyContactName: p.emergencyContactName || '',
-      emergencyContactPhone: p.emergencyContactPhone || '',
-      isActive: !!p.isActive,
-    };
-  };
-
-  const isDirty = JSON.stringify(normalizeForCompare(patient)) !== JSON.stringify(normalizeForCompare(editedPatient));
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
-
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'medical-badge-normal';
-      case 'completed':
-        return 'medical-badge-normal';
-      case 'in-progress':
-        return 'medical-badge-mild';
-      case 'urgent':
-        return 'medical-badge-urgent';
-      case 'paid':
-        return 'medical-badge-normal';
-      case 'pending':
-        return 'medical-badge-mild';
-      case 'overdue':
-        return 'medical-badge-urgent';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>Patient Record</span>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+          <DialogTitle className="flex items-center space-x-2 text-xl font-semibold text-professional-dark">
+            <User className="h-5 w-5 text-medical-blue" />
+            <span>Edit Patient</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <PatientBasicInfo
-              patient={patient}
-              editedPatient={editedPatient}
-              setEditedPatient={setEditedPatient}
-              getInitials={getInitials}
-              getAge={getAge}
-              toSafeDate={toSafeDate}
-            />
-
-            <div>
-              <InsuranceInfoCard editedPatient={editedPatient} setEditedPatient={setEditedPatient} />
-            </div>
-          </div>
-
-          {/* Medical history + meds + allergies remain here to keep prop passing minimal */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Personal Information */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Medical Conditions</CardTitle>
+                <CardTitle className="text-lg text-medical-blue">Personal Information</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Textarea
-                    value={editedPatient.medicalHistory ?? ''}
-                    onChange={(e) => setEditedPatient(prev => ({ ...prev, medicalHistory: e.target.value }))}
-                    className="min-h-[120px] text-sm"
-                    placeholder="Medical history"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Current Medications</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Textarea
-                    value={(editedPatient.currentMedications && Array.isArray(editedPatient.currentMedications)) ? (editedPatient.currentMedications as string[]).join('\n') : (typeof editedPatient.currentMedications === 'string' ? editedPatient.currentMedications : '')}
-                    onChange={(e) => setEditedPatient(prev => ({ ...prev, currentMedications: e.target.value.split('\n').filter(Boolean) }))}
-                    className="min-h-[80px] text-sm"
-                    placeholder="One medication per line"
-                  />
-                </div>
-
-                <div className="mt-6">
-                  <h4 className="font-medium text-professional-dark mb-2">Allergies</h4>
-                  <div className="space-y-2">
-                    {((editedPatient.allergies && (editedPatient.allergies as string[]).length > 0) || false) ? (
-                      (editedPatient.allergies as string[]).map((allergy, index) => (
-                        <Badge key={index} variant="outline" className="mr-2">
-                          {allergy}
-                        </Badge>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500">No known allergies</p>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter first name" {...field} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    <div className="mt-2">
-                      <Textarea
-                        value={editedPatient.allergies && Array.isArray(editedPatient.allergies) ? (editedPatient.allergies as string[]).join('\n') : ''}
-                        onChange={(e) => setEditedPatient(prev => ({ ...prev, allergies: e.target.value.split('\n').filter(Boolean) }))}
-                        className="min-h-[60px] text-sm"
-                        placeholder="One allergy per line"
-                      />
-                    </div>
-                  </div>
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter last name" {...field} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center space-x-1">
+                          <Mail className="h-4 w-4" />
+                          <span>Email Address *</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="patient@example.com" {...field} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center space-x-1">
+                          <Phone className="h-4 w-4" />
+                          <span>Phone Number *</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input placeholder="(555) 123-4567" {...field} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="dateOfBirth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center space-x-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>Date of Birth *</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
+                            onChange={(e) => field.onChange(new Date(e.target.value))}
+                            className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Gender *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                            <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-1">
+                        <MapPin className="h-4 w-4" />
+                        <span>Address</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter full address" className="min-h-[80px] border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Emergency Contact */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg text-healthcare-green">Emergency Contact</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="emergencyContactName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Emergency Contact Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Contact person name" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="emergencyContactPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Emergency Contact Phone</FormLabel>
+                        <FormControl>
+                          <Input placeholder="(555) 987-6543" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          <PatientTabs
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            appointments={appointments}
-            procedures={procedures}
-            payments={payments}
-            getStatusColor={getStatusColor}
-            toSafeDate={toSafeDate}
-          />
+            {/* Medical Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg text-diagnostic-purple">Medical Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="insuranceProvider"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Insurance Information</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Insurance provider and policy details" value={field.value || ""} onChange={(e) => field.onChange(e.target.value || undefined)} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-          <EmergencyContactCard patient={patient} editedPatient={editedPatient} setEditedPatient={setEditedPatient} />
-        </div>
-        <div className="flex flex-col md:flex-row justify-end space-y-3 md:space-y-0 md:space-x-3 pt-6 border-t">
-          <div className="flex-1">
-            <div className="text-xs text-gray-500">Date of birth</div>
-                    <Input
-                      type="date"
-                      value={toSafeDate(editedPatient.dateOfBirth ?? patient.dateOfBirth) ? format(toSafeDate(editedPatient.dateOfBirth ?? patient.dateOfBirth) as Date, 'yyyy-MM-dd') : ''}
-                      onChange={(e) => setEditedPatient(prev => ({ ...prev, dateOfBirth: e.target.value }))}
-                      className="p-1"
-                    />
-          </div>
+                <FormField
+                  control={form.control}
+                  name="medicalHistory"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Medical History</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Previous medical conditions, allergies, medications, surgical history... (one per line)"
+                          className="min-h-[120px] border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring"
+                          value={Array.isArray(field.value) ? field.value.join('\n') : (typeof field.value === 'string' ? field.value : '')}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
 
-          <div className="flex justify-end space-x-3">
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
-            <Button
-              className="medical-button-primary"
-              onClick={() => {
-                // Call mutation with only changed fields
-                const payload: Partial<Patient> & { id?: string } = { id: patient.id };
-                const normalizedOrig = normalizeForCompare(patient) as any;
-                const normalizedEdit = normalizeForCompare(editedPatient) as any;
-                Object.keys(normalizedEdit).forEach((key) => {
-                  if (normalizedEdit[key] !== normalizedOrig[key]) {
-                    // Map back a few fields
-                    if (key === 'currentMedications' || key === 'allergies') {
-                      (payload as any)[key] = editedPatient[key];
-                    } else if (key === 'dateOfBirth') {
-                      // Ensure dateOfBirth is a YYYY-MM-DD string or null
-                      const dob = editedPatient.dateOfBirth ?? patient.dateOfBirth;
-                      if (!dob) {
-                        (payload as any)[key] = null;
-                      } else if (typeof dob === 'string') {
-                        (payload as any)[key] = dob;
-                      } else {
-                        (payload as any)[key] = new Date(dob).toISOString().split('T')[0];
-                      }
-                    } else {
-                      (payload as any)[key] = (editedPatient as any)[key];
-                    }
-                  }
-                });
-
-                // Use service hook which will map id -> patientId and call the edge function
-                updatePatientMutation.mutate(payload as any);
-              }}
-              disabled={!isDirty || updatePatientMutation.status === 'pending'}
-            >
-              {updatePatientMutation.status === 'pending' ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
-        </div>
+            {/* Form Actions */}
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="medical-button-primary"
+                disabled={updatePatientMutation.isPending}
+              >
+                {updatePatientMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
