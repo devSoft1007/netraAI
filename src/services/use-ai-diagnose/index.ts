@@ -1,1 +1,1 @@
-export { useStoreAiDiagnosis } from './use-ai-diagnose'
+export { useStoreAiDiagnosis, useListAiAnalyses } from './use-ai-diagnose'

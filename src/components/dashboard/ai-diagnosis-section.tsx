@@ -5,8 +5,16 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
-import type { AiDiagnosis, Patient } from "@shared/schema";
-import { useStoreAiDiagnosis } from "@/services/use-ai-diagnose";
+import type { Patient } from "@shared/schema";
+import { useStoreAiDiagnosis, useListAiAnalyses } from "@/services/use-ai-diagnose";
+
+type FeedbackPayload = {
+  analysis_id: string;
+  notes: string;
+  tags?: string[];
+  addl_findings?: Record<string, any>;
+};
+
 
 // Interface for your API response
 interface DiagnosisResponse {
@@ -43,13 +51,35 @@ export default function AiDiagnosisSection() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [analysisResult, setAnalysisResult] = useState<DiagnosisResponse | null>(null);
+  const [feedbackNotes, setFeedbackNotes] = useState('');
+  const [feedbackTags, setFeedbackTags] = useState<string>('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const useCreateFeedback = () =>
+  useMutation({
+    mutationFn: async (payload: FeedbackPayload) => {
+      const res = await apiRequest('POST', '/api/analysis-feedback', payload);
+      return res.json();
+    },
+  });
+
+const useListFeedback = (analysisId?: string) =>
+  useQuery({
+    queryKey: ['/api/analysis-feedback', analysisId],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/analysis-feedback?analysis_id=${analysisId}`);
+      return res.json() as Promise<Array<{ id: string; notes: string; tags: string[]; created_at: string }>>;
+    },
+    enabled: Boolean(analysisId),
+  });
+
+  const createFeedback = useCreateFeedback();
+  const { data: feedbackList } = useListFeedback(analysisResult?.meta?.request_id); // assuming you store and return analysis_id; replace with real id from DB if available
+
   
-  // const { data: recentDiagnoses, isLoading } = useQuery<AiDiagnosis[]>({
-  //   queryKey: ['/'],
-  // });
-  const recentDiagnoses: any = []
+  // Fetch recent analyses from Edge Function via custom hook
+  const { data: recentDiagnoses, isLoading: loadingAnalyses } = useListAiAnalyses(3);
 
   const { data: patients } = useQuery<Patient[]>({
     queryKey: ['/api/patients'],
@@ -57,20 +87,6 @@ export default function AiDiagnosisSection() {
 
   const { mutate: storeAiDiagnosis } = useStoreAiDiagnosis();
 
-  // ✅ ADD THIS MISSING FUNCTION
-  const getSeverityFromResponse = (data: DiagnosisResponse): string => {
-    const drSeverity = data.diabetic_retinopathy.severity_level;
-    const glaucomaSeverity = data.glaucoma.severity_level;
-    
-    // Determine overall severity based on highest individual severity
-    const maxSeverity = Math.max(drSeverity, glaucomaSeverity);
-    
-    if (maxSeverity === 0) return 'normal';
-    if (maxSeverity === 1) return 'mild';
-    if (maxSeverity === 2) return 'moderate';
-    if (maxSeverity >= 3) return 'severe';
-    return 'normal';
-  };
 
   const analyzeImageMutation = useMutation({
     mutationFn: async (file: File): Promise<DiagnosisResponse> => {
@@ -428,37 +444,116 @@ export default function AiDiagnosisSection() {
               </div>
             </div>
           </div>
+          {/* Doctor Feedback */}
+<div className="medical-card bg-white border border-gray-200">
+  <h5 className="font-medium text-professional-dark mb-3">Doctor Feedback</h5>
+
+  <div className="space-y-3">
+    <textarea
+      className="w-full border rounded-md p-2 text-sm"
+      rows={4}
+      placeholder="Add clinical notes or additional findings (e.g., AMD, CSR)…"
+      value={feedbackNotes}
+      onChange={(e) => setFeedbackNotes(e.target.value)}
+    />
+
+    <input
+      type="text"
+      className="w-full border rounded-md p-2 text-sm"
+      placeholder="Tags (comma separated): e.g., AMD, CSR"
+      value={feedbackTags}
+      onChange={(e) => setFeedbackTags(e.target.value)}
+    />
+
+    <div className="flex justify-end">
+      <Button
+        className="bg-diagnostic-purple hover:bg-diagnostic-purple/90"
+        disabled={createFeedback.isPending || !feedbackNotes.trim()}
+        onClick={async () => {
+          try {
+            const tags = feedbackTags
+              .split(',')
+              .map(t => t.trim())
+              .filter(Boolean);
+
+            // IMPORTANT: replace analysis_id with the real DB id returned from your storeAiDiagnosis call.
+            // If your store endpoint returns { analysis: { id } }, keep that id in state and use it here.
+            const analysisId = (window as any).__lastAnalysisId__ || analysisResult?.meta?.request_id;
+
+            await createFeedback.mutateAsync({
+              analysis_id: analysisId,
+              notes: feedbackNotes.trim(),
+              tags,
+            });
+
+            setFeedbackNotes('');
+            setFeedbackTags('');
+            toast({ title: 'Feedback saved', variant: 'default' });
+            queryClient.invalidateQueries({ queryKey: ['/api/analysis-feedback', analysisId] });
+          } catch (e: any) {
+            toast({ title: 'Failed to save feedback', description: e?.message || '', variant: 'destructive' });
+          }
+        }}
+      >
+        Save Feedback
+      </Button>
+    </div>
+  </div>
+
+          {/* Existing feedback list */}
+          <div className="mt-5">
+            <h6 className="text-sm font-medium text-gray-700 mb-2">Previous Feedback</h6>
+            {!feedbackList || feedbackList.length === 0 ? (
+              <p className="text-sm text-gray-500">No feedback yet</p>
+            ) : (
+              <ul className="space-y-2">
+                {feedbackList.map(f => (
+                  <li key={f.id} className="border rounded-md p-2">
+                    <div className="text-xs text-gray-500 mb-1">
+                      {format(new Date(f.created_at), 'MMM dd, yyyy HH:mm')}
+                    </div>
+                    <p className="text-sm text-gray-800">{f.notes}</p>
+                    {f.tags?.length ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {f.tags.map(tag => (
+                          <span key={tag} className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs border">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
         </div>
       )}
 
       <div>
         <h4 className="font-medium text-professional-dark mb-4">Recent Analysis Results</h4>
         <div className="space-y-3">
-          {recentDiagnoses?.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No AI diagnoses available yet
-            </div>
+          {loadingAnalyses ? (
+            <div className="text-center py-8 text-gray-500 text-sm">Loading analyses…</div>
+          ) : !recentDiagnoses || recentDiagnoses.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No AI diagnoses available yet</div>
           ) : (
-            recentDiagnoses?.slice(0, 3).map((result: AiDiagnosis) => (
+            recentDiagnoses.map((result: any) => (
               <div key={result.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 bg-diagnostic-purple/10 rounded-lg flex items-center justify-center">
                     <Brain className="text-diagnostic-purple" />
                   </div>
                   <div>
-                    <p className="font-medium text-professional-dark">
-                      {getPatientName(result.patientId)}
-                    </p>
+                    <p className="font-medium text-professional-dark">{getPatientName(result.patientId)}</p>
                     <p className="text-sm text-gray-600">{result.diagnosis}</p>
-                    <p className="text-xs text-gray-500">
-                      {format(new Date(result.createdAt), 'MMM dd, yyyy HH:mm')}
-                    </p>
+                    <p className="text-xs text-gray-500">{format(new Date(result.createdAt), 'MMM dd, yyyy HH:mm')}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityColor(result.severity)}`}>
-                    {getSeverityText(result.severity)}
-                  </span>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityColor(result.severity)}`}>{getSeverityText(result.severity)}</span>
                   <p className="text-xs text-gray-500 mt-1">{result.confidence}% confidence</p>
                 </div>
               </div>
