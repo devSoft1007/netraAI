@@ -111,7 +111,7 @@ export default function AddProcedureModal({
                       </FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingPatients}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                             <SelectValue placeholder={isLoadingPatients ? "Loading patients..." : "Select patient"} />
                           </SelectTrigger>
                         </FormControl>
@@ -136,7 +136,7 @@ export default function AddProcedureModal({
                       <FormLabel>Procedure Type *</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingProcedures}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                             <SelectValue placeholder={isLoadingProcedures ? "Loading procedures..." : "Select procedure type"} />
                           </SelectTrigger>
                         </FormControl>
@@ -162,7 +162,7 @@ export default function AddProcedureModal({
                         <FormLabel>Doctor *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingDoctors}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                               <SelectValue placeholder={isLoadingDoctors ? "Loading doctors..." : "Select doctor"} />
                             </SelectTrigger>
                           </FormControl>
@@ -187,7 +187,7 @@ export default function AddProcedureModal({
                         <FormLabel>Status *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                           </FormControl>
@@ -219,6 +219,7 @@ export default function AddProcedureModal({
                             type="date" 
                             value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
                             onChange={(e) => field.onChange(new Date(e.target.value))}
+                            className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring"
                           />
                         </FormControl>
                         <FormMessage />
@@ -241,6 +242,7 @@ export default function AddProcedureModal({
                             placeholder="60" 
                             {...field} 
                             onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring"
                           />
                         </FormControl>
                         <FormMessage />
@@ -258,7 +260,7 @@ export default function AddProcedureModal({
                       <FormControl>
                         <Textarea 
                           placeholder="Description of the procedure..." 
-                          className="min-h-[80px]" 
+                          className="min-h-[80px] border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" 
                           value={field.value || ""}
                           onChange={(e) => field.onChange(e.target.value || null)}
                         />
@@ -279,7 +281,7 @@ export default function AddProcedureModal({
                       <FormControl>
                         <Textarea 
                           placeholder="Any additional notes about the procedure..." 
-                          className="min-h-[80px]" 
+                          className="min-h-[80px] border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" 
                           value={field.value || ""}
                           onChange={(e) => field.onChange(e.target.value || null)}
                         />

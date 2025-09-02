@@ -140,7 +140,7 @@ export default function AddAppointmentModal({
                       </FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                             <SelectValue placeholder="Select patient" />
                           </SelectTrigger>
                         </FormControl>
@@ -180,6 +180,7 @@ export default function AddAppointmentModal({
                             type="date" 
                             value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
                             onChange={(e) => field.onChange(new Date(e.target.value))}
+                            className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring"
                           />
                         </FormControl>
                         <FormMessage />
@@ -197,7 +198,7 @@ export default function AddAppointmentModal({
                           <span>Time *</span>
                         </FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <Input type="time" {...field} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -214,7 +215,7 @@ export default function AddAppointmentModal({
                         <FormLabel>Doctor *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                               <SelectValue placeholder="Select doctor" />
                             </SelectTrigger>
                           </FormControl>
@@ -245,7 +246,7 @@ export default function AddAppointmentModal({
                         <FormLabel>Status *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                           </FormControl>
@@ -272,7 +273,7 @@ export default function AddAppointmentModal({
                       <FormLabel>Procedure *</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                             <SelectValue placeholder="Select procedure" />
                           </SelectTrigger>
                         </FormControl>
@@ -304,7 +305,7 @@ export default function AddAppointmentModal({
                       <FormControl>
                         <Textarea 
                           placeholder="Additional notes or special instructions..." 
-                          className="min-h-[80px]" 
+                          className="min-h-[80px] border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" 
                           value={field.value || ""}
                           onChange={(e) => field.onChange(e.target.value || null)}
                         />
