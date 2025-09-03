@@ -9,6 +9,7 @@ import type { Payment, Patient } from "@shared/schema";
 import { usePayments } from '@/services/use-payments';
 import PaymentFilters, { type PaymentFiltersState } from '@/components/billing/payment-filters';
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious, PaginationLink } from '@/components/ui/pagination';
+import { MetricCardSkeleton, PaymentsListSkeleton, InlineLoaderBar } from '@/components/billing/payment-skeletons';
 
 export default function Billing() {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
@@ -19,7 +20,7 @@ export default function Billing() {
   useEffect(() => { setPage(1); }, [filters.limit]);
 
   const offset = (page - 1) * filters.limit;
-  const { data: paymentsData, isLoading } = usePayments({
+  const { data: paymentsData, isLoading, isFetching } = usePayments({
     limit: filters.limit,
     offset,
     status: filters.status,
@@ -72,13 +73,8 @@ export default function Billing() {
   const inr = useMemo(() => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }), []);
   const formatINR = (val: number | undefined | null) => inr.format(Number(val || 0));
 
-  if (isLoading) {
-    return (
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">Loading billing information...</div>
-      </main>
-    );
-  }
+  const showSkeletonMetrics = isLoading;
+  const showSkeletonList = isLoading;
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -102,56 +98,64 @@ export default function Billing() {
 
       {/* Financial Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-semibold text-professional-dark">
-                {formatINR(totalRevenue)}
-              </span>
-              <div className="w-8 h-8 bg-healthcare-green/10 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-4 w-4 text-healthcare-green" />
-              </div>
-            </div>
-            <p className="text-sm text-gray-500 mt-2">This month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Pending Payments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-semibold text-professional-dark">
-                {formatINR(pendingPayments)}
-              </span>
-              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-4 w-4 text-yellow-600" />
-              </div>
-            </div>
-            <p className="text-sm text-gray-500 mt-2">Awaiting payment</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Overdue Payments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-semibold text-professional-dark">
-                {formatINR(overduePayments)}
-              </span>
-              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-4 w-4 text-red-600" />
-              </div>
-            </div>
-            <p className="text-sm text-gray-500 mt-2">Requires follow-up</p>
-          </CardContent>
-        </Card>
+        {showSkeletonMetrics ? (
+          <>
+            <MetricCardSkeleton />
+            <MetricCardSkeleton />
+            <MetricCardSkeleton />
+          </>
+        ) : (
+          <>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-semibold text-professional-dark">
+                    {formatINR(totalRevenue)}
+                  </span>
+                  <div className="w-8 h-8 bg-healthcare-green/10 rounded-lg flex items-center justify-center">
+                    <DollarSign className="h-4 w-4 text-healthcare-green" />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mt-2">This month</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600">Pending Payments</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-semibold text-professional-dark">
+                    {formatINR(pendingPayments)}
+                  </span>
+                  <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <DollarSign className="h-4 w-4 text-yellow-600" />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mt-2">Awaiting payment</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600">Overdue Payments</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-semibold text-professional-dark">
+                    {formatINR(overduePayments)}
+                  </span>
+                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                    <DollarSign className="h-4 w-4 text-red-600" />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mt-2">Requires follow-up</p>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center justify-between">
@@ -166,7 +170,7 @@ export default function Billing() {
       </div>
 
       {/* Top Sticky Pagination Bar */}
-      {totalPages > 1 && (
+  {totalPages > 1 && (
         <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-4 py-3">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="text-xs text-gray-500 font-medium tracking-wide">
@@ -204,12 +208,19 @@ export default function Billing() {
       )}
 
       {/* Payments List */}
-  <Card>
-        <CardHeader>
-          <CardTitle>Recent Payments</CardTitle>
+      <Card>
+        <CardHeader className="space-y-1">
+          <CardTitle className="flex items-center justify-between w-full">
+            <span>Recent Payments</span>
+          </CardTitle>
+          {isFetching && !isLoading && (
+            <div className="mt-2"><InlineLoaderBar /></div>
+          )}
         </CardHeader>
         <CardContent>
-          {payments?.length === 0 ? (
+          {showSkeletonList ? (
+            <PaymentsListSkeleton rows={filters.limit < 10 ? filters.limit : 6} />
+          ) : payments?.length === 0 ? (
             <div className="text-center py-8">
               <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No payment records found.</p>
@@ -247,7 +258,6 @@ export default function Billing() {
                       )}
                     </div>
                   </div>
-                  
                   {payment.insuranceClaim && (
                     <div className="mt-3 pt-3 border-t">
                       <div className="flex justify-between text-sm">

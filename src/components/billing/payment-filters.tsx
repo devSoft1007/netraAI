@@ -69,6 +69,28 @@ export function PaymentFilters({ value, onChange, onReset, disabled }: PaymentFi
 
   useEffect(() => { setDraft(value); }, [value]);
 
+  // Track Select (page size) open state to avoid closing popover prematurely
+  const [selectOpen, setSelectOpen] = useState(false);
+
+  // Outside click to close (desktop), but ignore while Select dropdown is open
+  useEffect(() => {
+    if (!open || isMobile) return;
+    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+      if (selectOpen) return; // keep filters open while page size select active
+      const refEl = (refs as any).reference?.current as HTMLElement | null;
+      const floatEl = (refs as any).floating?.current as HTMLElement | null;
+      const target = e.target as Node;
+      if (floatEl?.contains(target) || refEl?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', handlePointerDown, true);
+    document.addEventListener('touchstart', handlePointerDown, true);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown, true);
+      document.removeEventListener('touchstart', handlePointerDown, true);
+    };
+  }, [open, isMobile, selectOpen, refs]);
+
   const toggleArrayVal = (key: keyof PaymentFiltersState, item: string) => {
     setDraft(prev => {
       const arr = (prev[key] as string[]) || [];
@@ -161,7 +183,7 @@ export function PaymentFilters({ value, onChange, onReset, disabled }: PaymentFi
         </div>
         <div>
           <Label className="text-xs uppercase text-gray-500">Page Size</Label>
-          <Select value={String(draft.limit)} onValueChange={(v) => setDraft(p => { const next = { ...p, limit: Number(v) } as PaymentFiltersState; onChange(next); return next; })}>
+          <Select open={selectOpen} onOpenChange={setSelectOpen} value={String(draft.limit)} onValueChange={(v) => setDraft(p => { const next = { ...p, limit: Number(v) } as PaymentFiltersState; onChange(next); return next; })}>
             <SelectTrigger className="mt-1">
               <SelectValue />
             </SelectTrigger>
