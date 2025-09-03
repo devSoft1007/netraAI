@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { DollarSign, Calendar as CalendarIcon, Hash } from "lucide-react";
+import { IndianRupee, Calendar as CalendarIcon, Hash } from "lucide-react";
 import { insertPaymentSchema, type InsertPayment } from "@/shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -91,7 +91,7 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2 text-xl font-semibold text-professional-dark">
-            <DollarSign className="h-5 w-5 text-medical-blue" />
+            <IndianRupee className="h-5 w-5 text-medical-blue" />
             <span>Add Payment</span>
           </DialogTitle>
         </DialogHeader>
@@ -111,7 +111,7 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
                         <FormLabel>Patient *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingPatients}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                               <SelectValue placeholder={loadingPatients ? "Loading patients..." : "Select patient"} />
                             </SelectTrigger>
                           </FormControl>
@@ -131,9 +131,9 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
                     name="amount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Amount (USD) *</FormLabel>
+                        <FormLabel>Amount (INR) *</FormLabel>
                         <FormControl>
-                          <Input type="number" min={0} step="0.01" value={field.value} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                          <Input type="number" min={0} step="0.01" value={field.value} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -150,7 +150,7 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
                         <FormLabel>Method *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                               <SelectValue placeholder="Select method" />
                             </SelectTrigger>
                           </FormControl>
@@ -174,7 +174,7 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
                         <FormLabel>Status *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="border border-gray-300 focus:ring-2 focus:ring-ring">
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                           </FormControl>
@@ -202,7 +202,7 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
                           <span>Payment Date</span>
                         </FormLabel>
                         <FormControl>
-                          <Input type="date" value={field.value ? (field.value instanceof Date ? field.value.toISOString().split("T")[0] : field.value) : ""} onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)} />
+                          <Input type="date" value={field.value ? (field.value instanceof Date ? field.value.toISOString().split("T")[0] : field.value) : ""} onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -218,7 +218,7 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
                           <span>Due Date</span>
                         </FormLabel>
                         <FormControl>
-                          <Input type="date" value={field.value ? (field.value instanceof Date ? field.value.toISOString().split("T")[0] : field.value) : ""} onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)} />
+                          <Input type="date" value={field.value ? (field.value instanceof Date ? field.value.toISOString().split("T")[0] : field.value) : ""} onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -250,9 +250,9 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
                       name="insuranceAmount"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Insurance Amount</FormLabel>
+                          <FormLabel>Insurance Amount (INR)</FormLabel>
                           <FormControl>
-                            <Input type="number" min={0} step="0.01" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} />
+                            <Input type="number" min={0} step="0.01" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -263,9 +263,9 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
                       name="patientAmount"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Patient Amount</FormLabel>
+                          <FormLabel>Patient Amount (INR)</FormLabel>
                           <FormControl>
-                            <Input type="number" min={0} step="0.01" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} />
+                            <Input type="number" min={0} step="0.01" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -284,7 +284,7 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
                         <span>Invoice Number</span>
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="INV-2025-001" {...field} />
+                        <Input placeholder="INV-2025-001" {...field} className="border border-gray-300 focus-visible:ring-2 focus-visible:ring-ring" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

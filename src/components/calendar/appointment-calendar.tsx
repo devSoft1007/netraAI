@@ -49,6 +49,25 @@ export default function AppointmentCalendar({
   const [currentView, setCurrentView] = useState<View>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState(new Date());
 
+  // Status to color mapping based on getStatusColor function
+  const statusColors = {
+    "confirmed": "bg-green-500",
+    "scheduled": "bg-blue-500",
+    "in-progress": "bg-yellow-500",
+    "completed": "bg-gray-500",
+    "cancelled": "bg-red-500",
+    "urgent": "bg-orange-500",
+  };
+
+  const statusLabels = {
+    "confirmed": "Confirmed",
+    "scheduled": "Scheduled",
+    "in-progress": "In Progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "urgent": "Urgent",
+  };
+
   // Use patient name from the appointment data
   const getPatientName = (appointment: Appointment) => {
     const a: any = appointment as any;
