@@ -74,7 +74,7 @@ export const paymentSchema = z.object({
   appointmentId: z.string().optional(),
   procedureId: z.string().optional(),
   amount: z.number(),
-  paymentMethod: z.enum(["cash", "card", "insurance", "check"]),
+  paymentMethod: z.enum(["cash", "card", "insurance", "check", "upi"]),
   paymentStatus: z.enum(["pending", "paid", "partial", "overdue"]).default("pending"),
   insuranceClaim: z.boolean().default(false),
   insuranceAmount: z.number().optional(),

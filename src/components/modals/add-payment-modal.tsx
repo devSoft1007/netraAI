@@ -176,6 +176,7 @@ export default function AddPaymentModal({ isOpen, onClose, payment }: AddPayment
                             <SelectItem value="card">Card</SelectItem>
                             <SelectItem value="insurance">Insurance</SelectItem>
                             <SelectItem value="check">Check</SelectItem>
+                            <SelectItem value="upi">UPI</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

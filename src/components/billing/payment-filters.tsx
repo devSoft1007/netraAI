@@ -29,7 +29,7 @@ interface PaymentFiltersProps {
 }
 
 const STATUS_OPTIONS = [ 'paid', 'pending', 'partial', 'overdue' ];
-const METHOD_OPTIONS = [ 'cash', 'card', 'insurance', 'check' ];
+const METHOD_OPTIONS = [ 'cash', 'card', 'insurance', 'check', 'upi' ];
 
 export function PaymentFilters({ value, onChange, onReset, disabled }: PaymentFiltersProps) {
   const [open, setOpen] = useState(false);
