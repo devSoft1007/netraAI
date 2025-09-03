@@ -7,9 +7,11 @@ import type { Patient } from "@shared/schema";
 export default function PatientSearch() {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: patients } = useQuery<Patient[]>({
-    queryKey: ['/api/patients'],
-  });
+  const patients: any[] = []; // Replace with actual patient data fetching logic
+
+  // const { data: patients } = useQuery<Patient[]>({
+  //   queryKey: ['/api/patients'],
+  // });
 
   const filteredPatients = patients?.filter((patient: Patient) =>
     `${patient.firstName} ${patient.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||

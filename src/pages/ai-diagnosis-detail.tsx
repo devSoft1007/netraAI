@@ -78,7 +78,8 @@ export default function AiDiagnosisDetail() {
   const id = params?.id || '';
 
   const { data: analysisRaw, isLoading: loadingAnalysis, isError: errorAnalysis } = useAiAnalysisById(id);
-  const { data: patients } = useQuery<Patient[]>({ queryKey: ['/api/patients'] });
+  const patients: any[] = []; // Replace with actual patient data fetching logic
+  // const { data: patients } = useQuery<Patient[]>({ queryKey: ['/api/patients'] });
 
   // Map backend snake_case to camelCase the component expects
   const analysis = useMemo(() => {

@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAddPayment } from '@/services/use-payments/use-payments';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { IndianRupee, Calendar as CalendarIcon, Hash } from "lucide-react";
 import { insertPaymentSchema, type InsertPayment } from "@/shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+// ...existing code...
+// ...existing code...
 import { usePatients } from "@/services/use-patient";
 
 interface AddPaymentModalProps {
@@ -20,8 +20,7 @@ interface AddPaymentModalProps {
 }
 
 export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProps) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  // ...existing code...
   const { data: patientsData, isLoading: loadingPatients } = usePatients();
   const patients = patientsData?.data?.patients || [];
 
@@ -41,31 +40,22 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
     },
   });
 
-  const mutation = useMutation({
-    mutationFn: async (data: InsertPayment) => {
-      // Convert potential Date objects to ISO
-      const payload: any = { ...data };
-      if (payload.paymentDate instanceof Date) payload.paymentDate = payload.paymentDate.toISOString();
-      if (payload.dueDate instanceof Date) payload.dueDate = payload.dueDate.toISOString();
-      // Strip empty optional values
-      Object.keys(payload).forEach((k) => {
-        if (payload[k] === "" || payload[k] === null) delete payload[k];
-      });
-      const res = await apiRequest("POST", "/api/payments", payload);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
-      toast({ title: "Payment Recorded", description: "The payment has been added successfully." });
-      handleClose();
-    },
-    onError: (err: any) => {
-      toast({ title: "Payment Failed", description: err.message || "Unable to record payment.", variant: "destructive" });
-    },
-  });
+  const mutation = useAddPayment();
 
   const onSubmit = (data: InsertPayment) => {
-    mutation.mutate(data);
+    // Convert potential Date objects to ISO
+    const payload: any = { ...data };
+    if (payload.paymentDate instanceof Date) payload.paymentDate = payload.paymentDate.toISOString();
+    if (payload.dueDate instanceof Date) payload.dueDate = payload.dueDate.toISOString();
+    // Strip empty optional values
+    Object.keys(payload).forEach((k) => {
+      if (payload[k] === "" || payload[k] === null) delete payload[k];
+    });
+    mutation.mutate(payload, {
+      onSuccess: () => {
+        handleClose();
+      },
+    });
   };
 
   const handleClose = () => {

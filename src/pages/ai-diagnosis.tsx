@@ -19,9 +19,10 @@ export default function AiDiagnosis() {
     queryKey: ['/api/ai-diagnoses'],
   });
 
-  const { data: patients } = useQuery<Patient[]>({
-    queryKey: ['/api/patients'],
-  });
+  const patients: any[] = []; // Replace with actual patient data fetching logic
+  // const { data: patients } = useQuery<Patient[]>({
+  //   queryKey: ['/api/patients'],
+  // });
 
   const analyzeImageMutation = useMutation({
     mutationFn: async (data: { patientId: string; imageUrl: string }) => {

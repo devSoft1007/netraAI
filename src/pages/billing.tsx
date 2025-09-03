@@ -14,9 +14,10 @@ export default function Billing() {
     queryKey: ['/api/payments'],
   });
 
-  const { data: patients } = useQuery<Patient[]>({
-    queryKey: ['/api/patients'],
-  });
+  const patients: any[] = []; // Replace with actual patient data fetching logic
+  // const { data: patients } = useQuery<Patient[]>({
+  //   queryKey: ['/api/patients'],
+  // });
 
   const getPatientName = (patientId: string) => {
     const patient = patients?.find((p: Patient) => p.id === patientId);

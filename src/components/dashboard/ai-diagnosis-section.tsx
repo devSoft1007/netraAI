@@ -82,9 +82,11 @@ const useListFeedback = (analysisId?: string) =>
   // Fetch recent analyses from Edge Function via custom hook
   const { data: recentDiagnoses, isLoading: loadingAnalyses } = useListAiAnalyses(3);
 
-  const { data: patients } = useQuery<Patient[]>({
-    queryKey: ['/api/patients'],
-  });
+  const patients: any[] = []; // Replace with actual patient data fetching logic
+
+  // const { data: patients } = useQuery<Patient[]>({
+  //   queryKey: ['/api/patients'],
+  // });
 
   const { mutate: storeAiDiagnosis } = useStoreAiDiagnosis();
 
