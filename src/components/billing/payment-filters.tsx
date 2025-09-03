@@ -79,22 +79,28 @@ export function PaymentFilters({ value, onChange, onReset, disabled }: PaymentFi
   const toggleArrayVal = (key: keyof PaymentFiltersState, item: string) => {
     setDraft(prev => {
       const arr = (prev[key] as string[]) || [];
-      return { ...prev, [key]: arr.includes(item) ? arr.filter(i => i !== item) : [...arr, item] };
+      const next: PaymentFiltersState = { ...prev, [key]: arr.includes(item) ? arr.filter(i => i !== item) : [...arr, item] } as PaymentFiltersState;
+      onChange(next); // auto apply
+      return next;
     });
   };
 
-  const apply = () => {
-    onChange(draft);
-    setOpen(false);
-  };
 
   const reset = () => {
     const cleared: PaymentFiltersState = { status: [], method: [], limit: value.limit };
     setDraft(cleared);
     onChange(cleared);
     onReset?.();
-    setOpen(false);
   };
+
+  // Debounce invoiceNumber / date range changes for auto apply
+  useEffect(() => {
+    const id = setTimeout(() => {
+      onChange(draft);
+    }, 400);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.invoiceNumber, draft.from, draft.to]);
 
   const triggerButton = (
     <Button
@@ -162,7 +168,7 @@ export function PaymentFilters({ value, onChange, onReset, disabled }: PaymentFi
         </div>
         <div>
           <Label className="text-xs uppercase text-gray-500">Page Size</Label>
-          <Select value={String(draft.limit)} onValueChange={(v) => setDraft(p => ({ ...p, limit: Number(v) }))}>
+          <Select value={String(draft.limit)} onValueChange={(v) => setDraft(p => { const next = { ...p, limit: Number(v) } as PaymentFiltersState; onChange(next); return next; })}>
             <SelectTrigger className="mt-1">
               <SelectValue />
             </SelectTrigger>
@@ -173,8 +179,8 @@ export function PaymentFilters({ value, onChange, onReset, disabled }: PaymentFi
         </div>
       </div>
       <div className="flex justify-end gap-2 pt-2 border-t">
-        <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
-        <Button size="sm" className="medical-button-primary" onClick={apply}>Apply</Button>
+        <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Close</Button>
+  <Button size="sm" variant="secondary" onClick={reset}>Reset</Button>
       </div>
     </div>
   );

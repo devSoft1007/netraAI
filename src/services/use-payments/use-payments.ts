@@ -69,6 +69,9 @@ export interface PaymentsResponse {
 	offset: number;
 	filters: Record<string, any>;
 	payments: Payment[];
+	hasMore: boolean;
+	page: number;
+	totalPages: number;
 }
 
 // Hook for fetching payments via Edge Function (get-payments)
@@ -129,13 +132,20 @@ export function usePayments(params: PaymentsParams = {}) {
 					updatedAt: p.created_at ? new Date(p.created_at) : new Date(),
 				}));
 
+				const totalCount = edgeData.count ?? 0;
+				const page = edgeData.limit ? Math.floor(edgeData.offset / edgeData.limit) + 1 : 1;
+				const totalPages = edgeData.limit ? Math.max(1, Math.ceil(totalCount / edgeData.limit)) : 1;
+				const hasMore = page < totalPages;
 				return {
 					success: true,
-					count: edgeData.count,
+					count: totalCount,
 					limit: edgeData.limit,
 					offset: edgeData.offset,
 					filters: edgeData.filters,
 					payments,
+					hasMore,
+					page,
+					totalPages,
 				};
 			} catch (error: any) {
 				console.error('Error fetching payments:', error);

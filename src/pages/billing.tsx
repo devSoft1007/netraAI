@@ -28,8 +28,8 @@ export default function Billing() {
     dir: 'desc'
   });
   const payments = paymentsData?.payments || [];
-  const total = paymentsData?.count || 0;
-  const totalPages = Math.max(1, Math.ceil(total / filters.limit));
+  const total = paymentsData?.count ?? 0;
+  const totalPages = paymentsData?.totalPages ?? (total > 0 ? Math.ceil(total / filters.limit) : 0);
 
   const patients: any[] = []; // Replace with actual patient data fetching logic
   // const { data: patients } = useQuery<Patient[]>({
@@ -223,14 +223,14 @@ export default function Billing() {
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
+  {totalPages > 1 && (
         <div className="mt-6">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage(p => Math.max(1, p - 1)); }} />
               </PaginationItem>
-              {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => {
+      {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => {
                 const pnum = i + 1;
                 return (
                   <PaginationItem key={pnum}>
