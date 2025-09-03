@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { DollarSign, Plus, Filter, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,12 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import AddPaymentModal from "@/components/modals/add-payment-modal";
 import type { Payment, Patient } from "@shared/schema";
+import { usePayments } from '@/services/use-payments';
 
 export default function Billing() {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
-  const { data: payments, isLoading } = useQuery<Payment[]>({
-    queryKey: ['/api/payments'],
-  });
+  const { data: paymentsData, isLoading } = usePayments({ limit: 50 });
+  const payments = paymentsData?.payments || [];
 
   const patients: any[] = []; // Replace with actual patient data fetching logic
   // const { data: patients } = useQuery<Patient[]>({
