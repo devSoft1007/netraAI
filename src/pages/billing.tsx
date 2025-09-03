@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, Plus, Filter, FileText } from "lucide-react";
+import { DollarSign, Plus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,11 +7,29 @@ import { format } from "date-fns";
 import AddPaymentModal from "@/components/modals/add-payment-modal";
 import type { Payment, Patient } from "@shared/schema";
 import { usePayments } from '@/services/use-payments';
+import PaymentFilters, { type PaymentFiltersState } from '@/components/billing/payment-filters';
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious, PaginationLink } from '@/components/ui/pagination';
 
 export default function Billing() {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
-  const { data: paymentsData, isLoading } = usePayments({ limit: 50 });
+  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState<PaymentFiltersState>({ status: [], method: [], limit: 20 });
+
+  const offset = (page - 1) * filters.limit;
+  const { data: paymentsData, isLoading } = usePayments({
+    limit: filters.limit,
+    offset,
+    status: filters.status,
+    method: filters.method,
+    from: filters.from,
+    to: filters.to,
+    invoiceNumber: filters.invoiceNumber,
+    sort: 'payment_date',
+    dir: 'desc'
+  });
   const payments = paymentsData?.payments || [];
+  const total = paymentsData?.count || 0;
+  const totalPages = Math.max(1, Math.ceil(total / filters.limit));
 
   const patients: any[] = []; // Replace with actual patient data fetching logic
   // const { data: patients } = useQuery<Patient[]>({
@@ -129,15 +147,19 @@ export default function Billing() {
         </Card>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <Button variant="outline">
-          <Filter className="h-4 w-4 mr-2" />
-          Filter by Status
-        </Button>
+      <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center justify-between">
+        <PaymentFilters
+          value={filters}
+          onChange={(next) => { setFilters(next); setPage(1); }}
+          onReset={() => { setPage(1); }}
+        />
+        <div className="text-sm text-gray-500">
+          Showing {payments.length ? offset + 1 : 0}-{offset + payments.length} of {total}
+        </div>
       </div>
 
       {/* Payments List */}
-      <Card>
+  <Card>
         <CardHeader>
           <CardTitle>Recent Payments</CardTitle>
         </CardHeader>
@@ -199,6 +221,39 @@ export default function Billing() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage(p => Math.max(1, p - 1)); }} />
+              </PaginationItem>
+              {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => {
+                const pnum = i + 1;
+                return (
+                  <PaginationItem key={pnum}>
+                    <PaginationLink
+                      href="#"
+                      isActive={pnum === page}
+                      onClick={(e) => { e.preventDefault(); setPage(pnum); }}
+                    >{pnum}</PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              {totalPages > 5 && (
+                <PaginationItem>
+                  <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setPage(totalPages); }}>...{totalPages}</PaginationLink>
+                </PaginationItem>
+              )}
+              <PaginationItem>
+                <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage(p => Math.min(totalPages, p + 1)); }} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </main>
   );
 }
