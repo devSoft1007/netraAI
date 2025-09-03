@@ -79,7 +79,18 @@ export function usePayments(params: PaymentsParams = {}) {
 	const { toast } = useToast();
 
 	return useQuery<PaymentsResponse>({
-		queryKey: ['payments', params],
+		queryKey: [
+			'payments',
+			params.limit ?? null,
+			params.offset ?? 0,
+			(params.status || []).join(','),
+			(params.method || []).join(','),
+			params.from ?? null,
+			params.to ?? null,
+			params.invoiceNumber ?? null,
+			params.sort ?? 'payment_date',
+			params.dir ?? 'desc'
+		],
 		queryFn: async () => {
 			try {
 				const { data: { session } } = await supabase.auth.getSession();

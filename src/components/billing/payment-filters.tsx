@@ -59,20 +59,13 @@ export function PaymentFilters({ value, onChange, onReset, disabled }: PaymentFi
     whileElementsMounted: autoUpdate
   });
 
-  // Close on escape / outside click for desktop popover
+  // Close on Escape (allow internal portal interactions like Radix Select without collapsing popover)
   useEffect(() => {
     if (!open || isMobile) return;
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false); }
-    function onClick(e: MouseEvent) {
-      const refEl = refs.reference.current as HTMLElement | null;
-      const floatEl = refs.floating.current as HTMLElement | null;
-      if (!refEl || !floatEl) return;
-      if (!refEl.contains(e.target as Node) && !floatEl.contains(e.target as Node)) setOpen(false);
-    }
     window.addEventListener('keydown', onKey);
-    window.addEventListener('mousedown', onClick);
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('mousedown', onClick); };
-  }, [open, isMobile, refs.reference, refs.floating]);
+    return () => { window.removeEventListener('keydown', onKey); };
+  }, [open, isMobile]);
 
   useEffect(() => { setDraft(value); }, [value]);
 
@@ -211,6 +204,7 @@ export function PaymentFilters({ value, onChange, onReset, disabled }: PaymentFi
             role="dialog"
             aria-label="Payment Filters"
             className="z-50 rounded-md border bg-popover text-popover-foreground shadow-lg outline-none animate-in fade-in zoom-in p-4 space-y-4 overflow-y-auto"
+            onMouseDown={(e) => e.stopPropagation()}
           >
             {contentBody}
           </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DollarSign, Plus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,9 @@ export default function Billing() {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<PaymentFiltersState>({ status: [], method: [], limit: 20 });
+
+  // Reset to first page on page size change (limit)
+  useEffect(() => { setPage(1); }, [filters.limit]);
 
   const offset = (page - 1) * filters.limit;
   const { data: paymentsData, isLoading } = usePayments({
@@ -65,6 +68,10 @@ export default function Billing() {
   const overduePayments = payments?.filter((payment: Payment) => payment.paymentStatus === 'overdue')
     .reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
 
+  // Currency formatter (Indian Rupee)
+  const inr = useMemo(() => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }), []);
+  const formatINR = (val: number | undefined | null) => inr.format(Number(val || 0));
+
   if (isLoading) {
     return (
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -102,7 +109,7 @@ export default function Billing() {
           <CardContent>
             <div className="flex items-center justify-between">
               <span className="text-2xl font-semibold text-professional-dark">
-                ${totalRevenue.toLocaleString()}
+                {formatINR(totalRevenue)}
               </span>
               <div className="w-8 h-8 bg-healthcare-green/10 rounded-lg flex items-center justify-center">
                 <DollarSign className="h-4 w-4 text-healthcare-green" />
@@ -119,7 +126,7 @@ export default function Billing() {
           <CardContent>
             <div className="flex items-center justify-between">
               <span className="text-2xl font-semibold text-professional-dark">
-                ${pendingPayments.toLocaleString()}
+                {formatINR(pendingPayments)}
               </span>
               <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
                 <DollarSign className="h-4 w-4 text-yellow-600" />
@@ -136,7 +143,7 @@ export default function Billing() {
           <CardContent>
             <div className="flex items-center justify-between">
               <span className="text-2xl font-semibold text-professional-dark">
-                ${overduePayments.toLocaleString()}
+                {formatINR(overduePayments)}
               </span>
               <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                 <DollarSign className="h-4 w-4 text-red-600" />
@@ -157,6 +164,44 @@ export default function Billing() {
           Showing {payments.length ? offset + 1 : 0}-{offset + payments.length} of {total}
         </div>
       </div>
+
+      {/* Top Sticky Pagination Bar */}
+      {totalPages > 1 && (
+        <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b mb-4 py-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="text-xs text-gray-500 font-medium tracking-wide">
+              Page {page} of {totalPages}
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage(p => Math.max(1, p - 1)); }} />
+                </PaginationItem>
+                {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => {
+                  const pnum = i + 1;
+                  return (
+                    <PaginationItem key={pnum}>
+                      <PaginationLink
+                        href="#"
+                        isActive={pnum === page}
+                        onClick={(e) => { e.preventDefault(); setPage(pnum); }}
+                      >{pnum}</PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                {totalPages > 5 && (
+                  <PaginationItem>
+                    <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setPage(totalPages); }}>...{totalPages}</PaginationLink>
+                  </PaginationItem>
+                )}
+                <PaginationItem>
+                  <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage(p => Math.min(totalPages, p + 1)); }} />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        </div>
+      )}
 
       {/* Payments List */}
   <Card>
@@ -190,7 +235,7 @@ export default function Billing() {
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-semibold text-professional-dark">
-                        ${Number(payment.amount).toLocaleString()}
+                        {formatINR(payment.amount)}
                       </p>
                       <Badge className={getStatusColor(payment.paymentStatus)}>
                         {payment.paymentStatus.charAt(0).toUpperCase() + payment.paymentStatus.slice(1)}
@@ -207,11 +252,11 @@ export default function Billing() {
                     <div className="mt-3 pt-3 border-t">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Insurance Amount:</span>
-                        <span>${payment.insuranceAmount || '0'}</span>
+                        <span>{formatINR(payment.insuranceAmount)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Patient Amount:</span>
-                        <span>${payment.patientAmount || '0'}</span>
+                        <span>{formatINR(payment.patientAmount)}</span>
                       </div>
                     </div>
                   )}
@@ -222,38 +267,6 @@ export default function Billing() {
         </CardContent>
       </Card>
 
-      {/* Pagination */}
-  {totalPages > 1 && (
-        <div className="mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage(p => Math.max(1, p - 1)); }} />
-              </PaginationItem>
-      {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => {
-                const pnum = i + 1;
-                return (
-                  <PaginationItem key={pnum}>
-                    <PaginationLink
-                      href="#"
-                      isActive={pnum === page}
-                      onClick={(e) => { e.preventDefault(); setPage(pnum); }}
-                    >{pnum}</PaginationLink>
-                  </PaginationItem>
-                );
-              })}
-              {totalPages > 5 && (
-                <PaginationItem>
-                  <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setPage(totalPages); }}>...{totalPages}</PaginationLink>
-                </PaginationItem>
-              )}
-              <PaginationItem>
-                <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage(p => Math.min(totalPages, p + 1)); }} />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      )}
     </main>
   );
 }
