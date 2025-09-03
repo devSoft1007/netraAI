@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
+import { useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useAddPayment } from '@/services/use-payments/use-payments';
+import { useAddPayment, useUpdatePayment } from '@/services/use-payments/use-payments';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +18,10 @@ import { usePatients } from "@/services/use-patient";
 interface AddPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
+  payment?: any; // existing payment for edit
 }
 
-export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProps) {
+export default function AddPaymentModal({ isOpen, onClose, payment }: AddPaymentModalProps) {
   // ...existing code...
   const { data: patientsData, isLoading: loadingPatients } = usePatients();
   const patients = patientsData?.data?.patients || [];
@@ -40,22 +42,47 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
     },
   });
 
-  const mutation = useAddPayment();
+  const mutationAdd = useAddPayment();
+  const mutationUpdate = useUpdatePayment();
+  const isEdit = !!payment;
+
+  useEffect(() => {
+    if (isEdit && payment) {
+      // Prefill (only fields we allow editing or showing)
+      form.reset({
+        patientId: payment.patientId || '',
+        amount: Number(payment.amount) || 0,
+        paymentMethod: payment.paymentMethod || 'cash',
+        paymentStatus: payment.paymentStatus || 'pending',
+        insuranceClaim: payment.insuranceClaim || false,
+        insuranceAmount: payment.insuranceAmount,
+        patientAmount: payment.patientAmount,
+        paymentDate: payment.paymentDate ? new Date(payment.paymentDate) : undefined,
+        dueDate: payment.dueDate ? new Date(payment.dueDate) : undefined,
+        invoiceNumber: payment.invoiceNumber || ''
+      });
+    }
+  }, [isEdit, payment, form]);
 
   const onSubmit = (data: InsertPayment) => {
-    // Convert potential Date objects to ISO
-    const payload: any = { ...data };
-    if (payload.paymentDate instanceof Date) payload.paymentDate = payload.paymentDate.toISOString();
-    if (payload.dueDate instanceof Date) payload.dueDate = payload.dueDate.toISOString();
-    // Strip empty optional values
-    Object.keys(payload).forEach((k) => {
-      if (payload[k] === "" || payload[k] === null) delete payload[k];
-    });
-    mutation.mutate(payload, {
-      onSuccess: () => {
-        handleClose();
-      },
-    });
+    if (isEdit && payment) {
+      // Only send editable fields to update edge function
+      const updatePayload: any = {
+        id: payment.id,
+        amount: data.amount,
+        paymentMethod: data.paymentMethod,
+        paymentStatus: data.paymentStatus,
+        paymentDate: data.paymentDate instanceof Date ? data.paymentDate : data.paymentDate ? new Date(data.paymentDate) : undefined
+      };
+      mutationUpdate.mutate(updatePayload, { onSuccess: handleClose });
+    } else {
+      // Convert potential Date objects to ISO
+      const payload: any = { ...data };
+      if (payload.paymentDate instanceof Date) payload.paymentDate = payload.paymentDate.toISOString();
+      if (payload.dueDate instanceof Date) payload.dueDate = payload.dueDate.toISOString();
+      Object.keys(payload).forEach((k) => { if (payload[k] === "" || payload[k] === null) delete payload[k]; });
+      mutationAdd.mutate(payload, { onSuccess: handleClose });
+    }
   };
 
   const handleClose = () => {
@@ -89,7 +116,7 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg text-medical-blue">Payment Details</CardTitle>
+                <CardTitle className="text-lg text-medical-blue">{isEdit ? 'Edit Payment' : 'Payment Details'}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -286,8 +313,8 @@ export default function AddPaymentModal({ isOpen, onClose }: AddPaymentModalProp
 
             <div className="flex justify-end space-x-3 pt-4 border-t">
               <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
-              <Button type="submit" className="medical-button-primary" disabled={mutation.isPending}>
-                {mutation.isPending ? "Saving..." : "Add Payment"}
+              <Button type="submit" className="medical-button-primary" disabled={mutationAdd.isPending || mutationUpdate.isPending}>
+                {mutationAdd.isPending || mutationUpdate.isPending ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Payment'}
               </Button>
             </div>
           </form>

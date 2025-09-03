@@ -48,6 +48,67 @@ export function useAddPayment() {
 	});
 }
 
+// Hook for updating a payment (limited editable fields per Edge Function contract)
+interface UpdatePaymentInput {
+	id: string; // payment id
+	amount?: number;
+	paymentMethod?: string;
+	paymentStatus?: string; // maps to 'status' in edge function
+	paymentDate?: Date | string;
+}
+
+export function useUpdatePayment() {
+	const queryClient = useQueryClient();
+	const { toast } = useToast();
+
+	return useMutation({
+		mutationFn: async (input: UpdatePaymentInput) => {
+			const { id, amount, paymentMethod, paymentStatus, paymentDate } = input;
+			if (!id) throw new Error('Payment id required');
+			const { data: { session } } = await supabase.auth.getSession();
+			if (!session) throw new Error('No authenticated session found');
+
+			const body: Record<string, any> = {};
+			if (amount != null) body.amount = amount;
+			if (paymentMethod) body.paymentMethod = paymentMethod;
+			if (paymentStatus) body.status = paymentStatus; // edge expects 'status'
+			if (paymentDate) {
+				const d = typeof paymentDate === 'string' ? paymentDate : paymentDate.toISOString().substring(0,10);
+				body.paymentDate = d; // edge will validate YYYY-MM-DD
+			}
+
+			if (Object.keys(body).length === 0) {
+				throw new Error('No update fields provided');
+			}
+
+			const url = `${supabaseUrl}/functions/v1/update-payment/${id}`;
+			const res = await fetch(url, {
+				method: 'PUT',
+				headers: {
+					Authorization: `Bearer ${session.access_token}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(body)
+			});
+			if (!res.ok) {
+				const errJson = await res.json().catch(() => ({}));
+				throw new Error(errJson.error || `Failed to update payment (${res.status})`);
+			}
+			const data = await res.json();
+			if (!data.success) throw new Error(data.error || 'Update failed');
+			return data.payment;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['payments'] });
+			toast({ title: 'Payment Updated', description: 'Changes saved successfully.' });
+		},
+		onError: (error: any) => {
+			console.error('Error updating payment:', error);
+			toast({ title: 'Update Failed', description: error.message || 'Unable to update payment.', variant: 'destructive' });
+		}
+	});
+}
+
 // Params for fetching payments
 export interface PaymentsParams {
 	limit?: number;

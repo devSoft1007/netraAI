@@ -13,6 +13,7 @@ import { MetricCardSkeleton, PaymentsListSkeleton, InlineLoaderBar } from '@/com
 
 export default function Billing() {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<Payment | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<PaymentFiltersState>({ status: [], method: [], limit: 20 });
 
@@ -78,7 +79,7 @@ export default function Billing() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <AddPaymentModal isOpen={isAddPaymentOpen} onClose={() => setIsAddPaymentOpen(false)} />
+  <AddPaymentModal isOpen={isAddPaymentOpen} onClose={() => { setIsAddPaymentOpen(false); setEditingPayment(undefined); }} payment={editingPayment} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h1 className="text-2xl font-semibold text-professional-dark">Billing & Payments</h1>
@@ -89,7 +90,7 @@ export default function Billing() {
             <FileText className="h-4 w-4 mr-2" />
             Generate Invoice
           </Button>
-      <Button className="medical-button-primary" onClick={() => setIsAddPaymentOpen(true)}>
+  <Button className="medical-button-primary" onClick={() => { setEditingPayment(undefined); setIsAddPaymentOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             New Payment
           </Button>
@@ -228,7 +229,7 @@ export default function Billing() {
           ) : (
             <div className="space-y-4">
               {payments?.map((payment: Payment) => (
-                <div key={payment.id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                <div key={payment.id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow cursor-pointer" onClick={() => { setEditingPayment(payment); setIsAddPaymentOpen(true); }}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h3 className="font-semibold text-professional-dark">

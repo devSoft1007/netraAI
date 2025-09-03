@@ -1,1 +1,1 @@
-export { useAddPayment, usePayments } from './use-payments'
+export { useAddPayment, usePayments, useUpdatePayment } from './use-payments'
