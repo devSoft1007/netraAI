@@ -86,6 +86,22 @@ export const paymentSchema = z.object({
   updatedAt: z.date(),
 });
 
+// Invoices (DB table: invoices)
+export const invoiceSchema = z.object({
+  id: z.string(),
+  clinicId: z.string(),
+  patientId: z.string(),
+  invoiceNumber: z.string(),
+  totalAmount: z.number(),
+  insuranceAmount: z.number().optional(),
+  patientAmount: z.number().optional(),
+  paymentMethod: z.enum(["cash", "card", "insurance", "check", "upi"]).optional(),
+  status: z.enum(["paid", "partial", "pending", "overdue", "void"]),
+  dueDate: z.date(),
+  paidDate: z.date().optional(),
+  createdAt: z.date(),
+});
+
 export const taskSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -139,6 +155,17 @@ export const insertPaymentSchema = paymentSchema.omit({
   dueDate: z.string().or(z.date()).optional(),
 });
 
+// For creating invoices from the client we intentionally omit clinicId because
+// it is inferred on the backend from the authenticated context (session / JWT)
+export const insertInvoiceSchema = invoiceSchema.omit({
+  id: true,
+  createdAt: true,
+  clinicId: true,
+}).extend({
+  dueDate: z.string().or(z.date()),
+  paidDate: z.string().or(z.date()).optional(),
+});
+
 export const insertTaskSchema = taskSchema.omit({
   id: true,
   createdAt: true,
@@ -162,6 +189,9 @@ export type InsertAiDiagnosis = z.infer<typeof insertAiDiagnosisSchema>;
 
 export type Payment = z.infer<typeof paymentSchema>;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+
+export type Invoice = z.infer<typeof invoiceSchema>;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 
 export type Task = z.infer<typeof taskSchema>;
 export type InsertTask = z.infer<typeof insertTaskSchema>;

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import AddPaymentModal from "@/components/modals/add-payment-modal";
+import GenerateInvoiceModal from "@/components/modals/generate-invoice-modal";
 import type { Payment, Patient } from "@shared/schema";
 import { usePayments } from '@/services/use-payments';
 import PaymentFilters, { type PaymentFiltersState } from '@/components/billing/payment-filters';
@@ -13,6 +14,7 @@ import { MetricCardSkeleton, PaymentsListSkeleton, InlineLoaderBar } from '@/com
 
 export default function Billing() {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<PaymentFiltersState>({ status: [], method: [], limit: 20 });
@@ -80,13 +82,14 @@ export default function Billing() {
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
   <AddPaymentModal isOpen={isAddPaymentOpen} onClose={() => { setIsAddPaymentOpen(false); setEditingPayment(undefined); }} payment={editingPayment} />
+  <GenerateInvoiceModal isOpen={isInvoiceModalOpen} onClose={() => setIsInvoiceModalOpen(false)} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h1 className="text-2xl font-semibold text-professional-dark">Billing & Payments</h1>
           <p className="text-gray-600 mt-1">Manage invoices, payments, and financial records</p>
         </div>
         <div className="flex space-x-3 mt-4 sm:mt-0">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setIsInvoiceModalOpen(true)}>
             <FileText className="h-4 w-4 mr-2" />
             Generate Invoice
           </Button>
